@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { AuthResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
 
@@ -12,13 +12,21 @@ export class AuthService {
   readonly currentUser = signal<User | null>(null);
   readonly token = signal<string | null>(localStorage.getItem('gpc_token'));
 
-  login(email: string, password: string) {
+  /**
+   * Envoie la requête POST /api/auth/login.
+   * Stocke le JWT reçu et met à jour l'utilisateur courant sans jamais logger le token.
+   */
+  login(email: string, password: string): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>('/api/auth/login', { email, password })
       .pipe(tap((response) => this.storeAuthentication(response)));
   }
 
-  register(name: string, email: string, password: string) {
+  /**
+   * Envoie la requête POST /api/auth/register.
+   * Stocke le JWT reçu et met à jour l'utilisateur courant sans jamais logger le token.
+   */
+  register(name: string, email: string, password: string): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>('/api/auth/register', { name, email, password })
       .pipe(tap((response) => this.storeAuthentication(response)));

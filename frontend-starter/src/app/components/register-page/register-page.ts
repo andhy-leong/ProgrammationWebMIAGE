@@ -66,7 +66,7 @@ export class RegisterPageComponent {
 
     const values = this.form.getRawValue();
 
-    this.auth.register(values.name, values.email, values.password).subscribe({
+    this.auth.register(values.name.trim(), values.email.trim(), values.password).subscribe({
       next: () => {
         this.loading.set(false);
         console.debug('[RegisterPage] Inscription réussie');

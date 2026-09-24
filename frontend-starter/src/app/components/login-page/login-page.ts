@@ -37,7 +37,7 @@ export class LoginPageComponent {
 
     const values = this.form.getRawValue();
 
-    this.auth.login(values.email, values.password).subscribe({
+    this.auth.login(values.email.trim(), values.password).subscribe({
       next: () => {
         this.loading.set(false);
         console.debug('[LoginPage] Connexion réussie');
