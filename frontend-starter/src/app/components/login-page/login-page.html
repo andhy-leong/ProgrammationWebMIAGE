@@ -1,24 +1,43 @@
-<section class="card">
+<section class="card auth-card">
   <h1>Connexion</h1>
+  <p class="subtitle">Accédez à votre espace Guitar Practice Cloud</p>
 
-  <form [formGroup]="form" (ngSubmit)="submit()">
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      {{ error() }}
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <label>
-      Email
-      <input type="email" formControlName="email" placeholder="demo@example.com" />
+      <span class="label-text">Adresse email</span>
+      <input
+        type="email"
+        formControlName="email"
+        placeholder="nom@exemple.com"
+        autocomplete="email"
+        [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+      />
       @if (form.controls.email.touched) {
-      @if (form.controls.email.errors?.['required']) {
-      <small class="error">L'email est obligatoire.</small>
-      } @else if (form.controls.email.errors?.['email']) {
-      <small class="error">Format d'email invalide.</small>
-      }
+        @if (form.controls.email.hasError('required')) {
+          <small class="field-error">L'adresse email est obligatoire.</small>
+        } @else if (form.controls.email.hasError('email')) {
+          <small class="field-error">Veuillez renseigner une adresse email valide (ex: utilisateur@domaine.com).</small>
+        }
       }
     </label>
 
     <label>
-      Mot de passe
-      <input type="password" formControlName="password" placeholder="••••••••" />
-      @if (form.controls.password.touched && form.controls.password.errors?.['required']) {
-      <small class="error">Le mot de passe est obligatoire.</small>
+      <span class="label-text">Mot de passe</span>
+      <input
+        type="password"
+        formControlName="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+        [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+      />
+      @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+        <small class="field-error">Le mot de passe est obligatoire.</small>
       }
     </label>
 
@@ -27,10 +46,7 @@
     </button>
   </form>
 
-  <!-- Message d'erreur serveur (ex: "Identifiants incorrects") -->
-  @if (error()) {
-  <p class="error">{{ error() }}</p>
-  }
-
-  <p><a routerLink="/register">Créer un compte</a></p>
+  <p class="auth-switch">
+    Pas encore de compte ? <a routerLink="/register">Créer un compte</a>
+  </p>
 </section>

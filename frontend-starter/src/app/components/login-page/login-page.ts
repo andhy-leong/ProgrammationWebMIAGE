@@ -27,7 +27,6 @@ export class LoginPageComponent {
   });
 
   submit(): void {
-    // Si la saisie est incomplète ou invalide, on ne lance pas la requête
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -42,14 +41,19 @@ export class LoginPageComponent {
       next: () => {
         this.loading.set(false);
         console.debug('[LoginPage] Connexion réussie');
-        // Redirection vers la bibliothèque de morceaux
         void this.router.navigateByUrl('/tracks');
       },
-      error: (error: { error?: { message?: string } }) => {
+      error: (error: { status?: number; error?: { message?: string } }) => {
         this.loading.set(false);
         console.error('[LoginPage] Échec de connexion', error);
-        // Ex: "Identifiants incorrects" (erreur 401)
-        this.error.set(error.error?.message ?? 'Erreur de connexion');
+
+        if (error.status === 401) {
+          this.error.set('Identifiants incorrects (adresse email ou mot de passe invalide).');
+        } else if (error.status === 0) {
+          this.error.set('Impossible de joindre le serveur. Vérifiez que le backend est bien démarré.');
+        } else {
+          this.error.set(error.error?.message ?? 'Une erreur est survenue lors de la connexion.');
+        }
       },
     });
   }
