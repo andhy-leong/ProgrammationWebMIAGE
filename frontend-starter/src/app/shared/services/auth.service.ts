@@ -1,8 +1,11 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { AuthResponse } from '../models/auth-response.model';
 import { User } from '../models/user.model';
+
+/** Clé de stockage du token JWT dans le navigateur (localStorage). */
+const TOKEN_STORAGE_KEY = 'gpc_token';
 
 /** Handles authentication and the current user's profile. */
 @Injectable({ providedIn: 'root' })
@@ -10,7 +13,8 @@ export class AuthService {
   private readonly http = inject(HttpClient);
 
   readonly currentUser = signal<User | null>(null);
-  readonly token = signal<string | null>(localStorage.getItem('gpc_token'));
+  readonly token = signal<string | null>(localStorage.getItem(TOKEN_STORAGE_KEY));
+  readonly isAuthenticated = computed(() => !!this.token());
 
   /**
    * Envoie la requête POST /api/auth/login.
@@ -58,13 +62,18 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('gpc_token');
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
     this.token.set(null);
     this.currentUser.set(null);
   }
 
+  /**
+   * Sauvegarde le jeton JWT dans le localStorage du navigateur et synchronise l'état réactif.
+   * RÈGLE DE SÉCURITÉ TP1 : La valeur du JWT ne doit JAMAIS être imprimée dans la console
+   * (console.log / console.debug / console.info) pour éviter le vol de session.
+   */
   private storeAuthentication(response: AuthResponse): void {
-    localStorage.setItem('gpc_token', response.token);
+    localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
     this.token.set(response.token);
     this.currentUser.set(response.user);
   }
