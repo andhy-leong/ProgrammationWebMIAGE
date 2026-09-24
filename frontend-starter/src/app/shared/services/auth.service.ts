@@ -36,6 +36,19 @@ export class AuthService {
       .pipe(tap((user) => this.currentUser.set(user)));
   }
 
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http.put<{ message: string }>('/api/users/me/password', {
+      currentPassword,
+      newPassword,
+    });
+  }
+
+  deleteAccount() {
+    return this.http
+      .delete<{ message: string }>('/api/users/me')
+      .pipe(tap(() => this.logout()));
+  }
+
   logout(): void {
     localStorage.removeItem('gpc_token');
     this.token.set(null);

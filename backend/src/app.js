@@ -6,6 +6,7 @@ import fs from "node:fs";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 import { User } from "./models/User.js";
 import { Track } from "./models/Track.js";
 
@@ -263,6 +264,86 @@ export function createApp() {
       res.json(user.toPublic());
     } catch (error) {
       console.error("[user] Erreur de mise à jour du profil", error);
+      next(error);
+    }
+  });
+
+  /** Modifie le mot de passe de l'utilisateur connecté. */
+  app.put("/api/users/me/password", auth, async (req, res, next) => {
+    try {
+      const { currentPassword, newPassword } = req.body || {};
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          message: "Mot de passe actuel et nouveau mot de passe requis",
+        });
+      }
+
+      if (typeof newPassword !== "string" || newPassword.length < 8) {
+        return res.status(400).json({
+          message: "Le nouveau mot de passe doit comporter au moins 8 caractères",
+        });
+      }
+
+      const user = await User.findById(req.auth.sub).select("+passwordHash");
+      if (!user) {
+        console.warn(`[user] Utilisateur introuvable : ${req.auth.sub}`);
+        return res.status(404).json({ message: "Utilisateur inconnu" });
+      }
+
+      const isValid = await user.verifyPassword(currentPassword);
+      if (!isValid) {
+        console.warn(`[user] Mot de passe actuel incorrect pour : ${user.email}`);
+        return res.status(400).json({ message: "Le mot de passe actuel est incorrect" });
+      }
+
+      user.passwordHash = await bcrypt.hash(newPassword, 10);
+      await user.save();
+
+      console.log(`[user] Mot de passe mis à jour pour ${user.id}`);
+      res.json({ message: "Mot de passe modifié avec succès" });
+    } catch (error) {
+      console.error("[user] Erreur de mise à jour du mot de passe", error);
+      next(error);
+    }
+  });
+
+  /** Supprime le compte de l'utilisateur connecté et toutes ses données associées. */
+  app.delete("/api/users/me", auth, async (req, res, next) => {
+    try {
+      const userId = req.auth.sub;
+      console.log(`[user] Demande de suppression du compte : ${userId}`);
+
+      const user = await User.findById(userId);
+      if (!user) {
+        console.warn(`[user] Utilisateur introuvable : ${userId}`);
+        return res.status(404).json({ message: "Utilisateur inconnu" });
+      }
+
+      // Recherche et suppression des fichiers audio liés aux pistes de l'utilisateur
+      const userTracks = await Track.find({ ownerId: userId }).select("+storedName");
+      for (const track of userTracks) {
+        if (track.storedName) {
+          const audioPath = path.join(UPLOADS, track.storedName);
+          try {
+            await fsPromises.unlink(audioPath);
+            console.log(`[user] Fichier audio supprimé : ${audioPath}`);
+          } catch (fileError) {
+            console.warn(`[user] Impossible de supprimer le fichier audio : ${audioPath}`, fileError);
+          }
+        }
+      }
+
+      // Suppression de toutes les pistes de l'utilisateur
+      await Track.deleteMany({ ownerId: userId });
+
+      // Suppression de l'utilisateur
+      await User.findByIdAndDelete(userId);
+
+      console.log(`[user] Compte utilisateur supprimé avec succès : ${userId}`);
+      res.json({ message: "Compte supprimé avec succès" });
+    } catch (error) {
+      console.error("[user] Erreur lors de la suppression du compte", error);
       next(error);
     }
   });

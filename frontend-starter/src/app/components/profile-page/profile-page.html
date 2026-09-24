@@ -1,14 +1,181 @@
-<section class="card">
-  <h1>Mon profil</h1>
-  <button type="button" (click)="load()">Charger mon profil</button>
-  @if (auth.currentUser(); as user) {
-    <p>
-      <b>{{ user.name }}</b><br />{{ user.email }}<br />
-      Membre depuis {{ user.createdAt.slice(0, 10) }}
-    </p>
-    <form [formGroup]="form" (ngSubmit)="save()">
-      <label>Nouveau nom<input formControlName="name" /></label>
-      <button type="submit">Enregistrer</button>
-    </form>
+<div class="profile-container">
+  <div class="profile-header card">
+    <div class="profile-title-row">
+      <div>
+        <h1>Mon profil</h1>
+        <p class="subtitle">Gérez vos informations personnelles et la sécurité de votre compte</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-secondary" (click)="load()" title="Recharger les données du profil">
+          Rafraîchir
+        </button>
+        <button type="button" class="btn-logout-header" (click)="logout()" title="Se déconnecter de la session">
+          Déconnexion
+        </button>
+      </div>
+    </div>
+
+    @if (auth.currentUser(); as user) {
+      <div class="user-summary">
+        <div class="avatar-badge">
+          {{ user.name.charAt(0).toUpperCase() }}
+        </div>
+        <div class="user-meta">
+          <h2>{{ user.name }}</h2>
+          <span class="user-email">{{ user.email }}</span>
+          <small class="member-since">Membre depuis le {{ user.createdAt.slice(0, 10) }}</small>
+        </div>
+      </div>
+    } @else {
+      <p class="muted">Chargement des données du profil...</p>
+    }
+  </div>
+
+  @if (auth.currentUser()) {
+    <!-- Section 1 : Modification des informations personnelles -->
+    <section class="card section-card">
+      <h2>Informations personnelles</h2>
+      <form [formGroup]="nameForm" (ngSubmit)="saveName()">
+        <label>
+          <span>Nom complet</span>
+          <input
+            type="text"
+            formControlName="name"
+            placeholder="Votre nom"
+            autocomplete="name"
+          />
+        </label>
+
+        @if (nameForm.controls.name.touched && nameForm.controls.name.hasError('required')) {
+          <small class="error">Le nom est obligatoire.</small>
+        }
+        @if (nameForm.controls.name.touched && nameForm.controls.name.hasError('minlength')) {
+          <small class="error">Le nom doit comporter au moins 2 caractères.</small>
+        }
+
+        @if (nameMessage()) {
+          <div class="alert alert-success">{{ nameMessage() }}</div>
+        }
+        @if (nameError()) {
+          <div class="alert alert-error">{{ nameError() }}</div>
+        }
+
+        <div class="form-actions">
+          <button type="submit" [disabled]="nameLoading() || nameForm.invalid">
+            @if (nameLoading()) { Enregistrement en cours... } @else { Enregistrer les modifications }
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Section 2 : Modification du mot de passe -->
+    <section class="card section-card">
+      <h2>Modifier mon mot de passe</h2>
+      <p class="section-desc">Pour sécuriser votre compte, choisissez un mot de passe d'au moins 8 caractères.</p>
+
+      <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+        <label>
+          <span>Mot de passe actuel</span>
+          <input
+            type="password"
+            formControlName="currentPassword"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          />
+        </label>
+        @if (passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.hasError('required')) {
+          <small class="error">Veuillez saisir votre mot de passe actuel.</small>
+        }
+
+        <label>
+          <span>Nouveau mot de passe</span>
+          <input
+            type="password"
+            formControlName="newPassword"
+            placeholder="Au moins 8 caractères"
+            autocomplete="new-password"
+          />
+        </label>
+        @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.hasError('required')) {
+          <small class="error">Veuillez saisir un nouveau mot de passe.</small>
+        }
+        @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.hasError('minlength')) {
+          <small class="error">Le nouveau mot de passe doit comporter au moins 8 caractères.</small>
+        }
+
+        <label>
+          <span>Confirmer le nouveau mot de passe</span>
+          <input
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Confirmez le nouveau mot de passe"
+            autocomplete="new-password"
+          />
+        </label>
+        @if (passwordForm.controls.confirmPassword.touched && passwordForm.controls.confirmPassword.hasError('required')) {
+          <small class="error">Veuillez confirmer votre nouveau mot de passe.</small>
+        }
+        @if (passwordForm.hasError('passwordMismatch') && passwordForm.controls.confirmPassword.touched) {
+          <small class="error">Les deux mots de passe ne correspondent pas.</small>
+        }
+
+        @if (passwordMessage()) {
+          <div class="alert alert-success">{{ passwordMessage() }}</div>
+        }
+        @if (passwordError()) {
+          <div class="alert alert-error">{{ passwordError() }}</div>
+        }
+
+        <div class="form-actions">
+          <button type="submit" [disabled]="passwordLoading() || passwordForm.invalid">
+            @if (passwordLoading()) { Mise à jour... } @else { Modifier le mot de passe }
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Section 3 : Zone de danger (Suppression du compte) -->
+    <section class="card section-card danger-card">
+      <h2 class="danger-title">Zone de danger</h2>
+      <p class="section-desc">
+        La suppression de votre compte est définitive. Elle supprimera votre profil ainsi que l'ensemble
+        des morceaux audio que vous avez mis en ligne sur la plateforme.
+      </p>
+
+      @if (deleteError()) {
+        <div class="alert alert-error">{{ deleteError() }}</div>
+      }
+
+      @if (!showDeleteConfirm()) {
+        <button type="button" class="btn-danger" (click)="toggleDeleteConfirm()">
+          Supprimer mon compte
+        </button>
+      } @else {
+        <div class="delete-confirmation-box">
+          <p class="warning-text">
+            ⚠️ <strong>Attention :</strong> Êtes-vous certain(e) de vouloir supprimer définitivement votre compte ?
+            Cette opération est irréversible.
+          </p>
+          <div class="confirm-buttons">
+            <button
+              type="button"
+              class="btn-danger-confirm"
+              [disabled]="deleteLoading()"
+              (click)="confirmDeleteAccount()"
+            >
+              @if (deleteLoading()) { Suppression en cours... } @else { Oui, supprimer définitivement }
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              [disabled]="deleteLoading()"
+              (click)="toggleDeleteConfirm()"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      }
+    </section>
   }
-</section>
+</div>

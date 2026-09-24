@@ -41,3 +41,12 @@ test("schémas Mongoose et relation", () => {
   assert.equal(t.title, "Blues");
   assert.equal(Track.schema.path("ownerId").options.ref, "User");
 });
+
+test("protection auth sur PUT /api/users/me/password et DELETE /api/users/me", async () => {
+  const rPass = await fetch(base + "/api/users/me/password", { method: "PUT" });
+  assert.equal(rPass.status, 401);
+
+  const rDel = await fetch(base + "/api/users/me", { method: "DELETE" });
+  assert.equal(rDel.status, 401);
+});
+

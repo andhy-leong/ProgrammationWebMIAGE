@@ -1,1 +1,270 @@
-:host { display: block; max-width: 700px; margin: 0 auto; }
+:host {
+  display: block;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.profile-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.profile-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.profile-title-row h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.6rem;
+  color: #123d32;
+}
+
+.subtitle {
+  margin: 0;
+  color: #556b64;
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-logout-header {
+  background: #fdf2f2;
+  color: #c5221f;
+  border: 1px solid #fecaca;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-logout-header:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.user-summary {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem;
+  background: #f0f6f4;
+  border-radius: 12px;
+  border: 1px solid #dbe8e3;
+}
+
+.avatar-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1d755e, #123d32);
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(18, 61, 50, 0.2);
+}
+
+.user-meta h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #123d32;
+}
+
+.user-email {
+  display: block;
+  font-size: 0.9rem;
+  color: #4b635b;
+}
+
+.member-since {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #6b827a;
+}
+
+.section-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #123d32;
+}
+
+.section-desc {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.88rem;
+  color: #556b64;
+  line-height: 1.4;
+}
+
+.card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  font-weight: 500;
+  font-size: 0.88rem;
+  color: #27453d;
+}
+
+input {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #b8cbc5;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus {
+  border-color: #1d755e;
+  box-shadow: 0 0 0 3px rgba(29, 117, 94, 0.15);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.alert-success {
+  background: #e6f4ea;
+  border: 1px solid #b7e1cd;
+  color: #137333;
+}
+
+.alert-error {
+  background: #fce8e6;
+  border: 1px solid #f5c2c7;
+  color: #c5221f;
+}
+
+.error {
+  color: #c5221f;
+  font-size: 0.8rem;
+  margin-top: -0.4rem;
+}
+
+/* Zone de danger */
+.danger-card {
+  border: 1px solid #f5c2c7;
+  background: #fffdfd;
+}
+
+.danger-title {
+  color: #b91c1c;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: 0;
+  padding: 0.7rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.delete-confirmation-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.warning-text {
+  margin: 0;
+  color: #991b1b;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-danger-confirm {
+  background: #b91c1c;
+  color: white;
+  border: 0;
+  padding: 0.65rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-danger-confirm:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.btn-secondary {
+  background: #e5ece9;
+  color: #27453d;
+  border: 1px solid #cbdad5;
+  padding: 0.65rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #d4e0dc;
+}
+
+.muted {
+  color: #6b827a;
+  font-style: italic;
+  font-size: 0.9rem;
+}
