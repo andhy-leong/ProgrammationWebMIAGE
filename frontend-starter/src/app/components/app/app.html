@@ -5,6 +5,9 @@
   </div>
   <nav aria-label="Navigation principale">
     @if (auth.token()) {
+      @if (auth.currentUser(); as user) {
+        <span class="user-greeting">👤 {{ user.name }}</span>
+      }
       <a routerLink="/tracks">Backing tracks</a>
       <a routerLink="/profile">Profil</a>
       <button type="button" class="btn-logout" (click)="logout()">Déconnexion</button>

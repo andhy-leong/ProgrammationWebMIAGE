@@ -171,3 +171,52 @@
     - Le **`Signal`** est une primitive de réactivité en **mémoire vive** propre à Angular. Il notifie automatiquement les composants et déclenche le réaffichage du DOM dès que sa valeur change, mais il est volatil et disparaît au rechargement de la page.
     - Le **`localStorage`** est une API du navigateur qui écrit sur le **disque** du client. Les données y persistent même après fermeture du navigateur, mais il n'est pas réactif (Angular ne peut pas écouter nativement ses modifications).
     - **Architecture retenue** : Le `localStorage` assure la persistance inter-sessions, tandis que le `Signal` assure la réactivité intra-application.
+
+---
+
+### 5. Mise à jour du Signal `currentUser`
+
+- **Objectif** :  
+  Centraliser et gérer l'identité de l'utilisateur connecté de façon réactive dans toute l'application via le Signal Angular `readonly currentUser = signal<User | null>(null)`, en assurant sa mise à jour automatique lors de la connexion, de l'inscription, de la lecture du profil (`GET /api/users/me`), de la mise à jour du nom (`PUT /api/users/me`), et de la déconnexion.
+
+- **Prompt principal** :  
+  > *« J'aimerais que tu me fasses la partie - mise à jour du Signal `currentUser` ; Quand tu le fais, j'aimerais que tu remplisses et que tu le détailles dans le fichier rapport_ia_modele.md »*
+
+- **Plan proposé par l'agent** :  
+  1. Définir le signal réactif `readonly currentUser = signal<User | null>(null)` dans [`AuthService`](frontend-starter/src/app/shared/services/auth.service.ts) en tant que source unique de vérité (*Single Source of Truth*).
+  2. Mettre à jour la valeur du signal avec `.set(...)` aux 5 moments clés du cycle de vie :
+     - **Connexion** (`login`) : `this.currentUser.set(response.user)`.
+     - **Inscription** (`register`) : `this.currentUser.set(response.user)`.
+     - **Chargement du profil** (`profile()`) : `.pipe(tap((user) => this.currentUser.set(user)))`.
+     - **Modification du profil** (`update(name)`) : `.pipe(tap((user) => this.currentUser.set(user)))` pour refléter immédiatement le nouveau nom renvoyé par le backend.
+     - **Déconnexion** (`logout()`) : `this.currentUser.set(null)`.
+  3. Mettre en place la **réhydratation au rechargement** dans [`AppComponent`](frontend-starter/src/app/components/app/app.ts) : si un token existe dans `localStorage` mais que `currentUser()` est null (suite à un rafraîchissement F5), déclencher un appel silencieux à `auth.profile()` pour restaurer le profil en mémoire.
+  4. Consommer le signal dans les templates avec la syntaxe réactive moderne `@if (auth.currentUser(); as user)` dans l'en-tête de navigation ([`app.html`](frontend-starter/src/app/components/app/app.html)) et sur la page de profil ([`profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html)).
+
+- **Vérifications réalisées par le binôme** :  
+  - **Propagation instantanée lors de la connexion** : Après saisie des identifiants et clic sur « Se connecter », la barre de navigation affiche immédiatement le prénom et nom (`👤 Demo`) sans aucun rechargement de page.
+  - **Propagation instantanée lors de la modification du nom** : Sur `/profile`, modification du nom en « Valentin F. » et clic sur « Enregistrer » : le nom est mis à jour en temps réel à la fois dans le badge du profil ET dans la barre de navigation en haut de l'écran, démontrant la puissance de la réactivité synchrone du signal.
+  - **Pérennité au rafraîchissement (F5)** : Rafraîchissement de la page : le constructeur de [`AppComponent`](frontend-starter/src/app/components/app/app.ts) réhydrate `currentUser`, l'interface conserve le nom sans repasser par un état déconnecté.
+  - **Nettoyage lors de la déconnexion** : Clic sur « Déconnexion » : `currentUser` repasse immédiatement à `null`, le header masque le nom et affiche à nouveau les liens de connexion/inscription.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'ancien modèle RxJS `BehaviorSubject` avec pipe `async` (`currentUser$ | async`) : les Signals natifs d'Angular offrent une granularité plus fine (*fine-grained reactivity*), ne nécessitent pas de désouscription manuelle pour éviter les fuites de mémoire, et allègent grandement la syntaxe des templates.
+  - Rejet de la duplication d'état : aucun composant ne stocke une copie locale de l'objet utilisateur, ils lisent tous directement le signal exposé par [`AuthService`](frontend-starter/src/app/shared/services/auth.service.ts).
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/services/auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts)
+  - [`frontend-starter/src/app/components/app/app.ts`](frontend-starter/src/app/components/app/app.ts)
+  - [`frontend-starter/src/app/components/app/app.html`](frontend-starter/src/app/components/app/app.html)
+  - [`frontend-starter/src/app/components/app/app.css`](frontend-starter/src/app/components/app/app.css)
+  - [`frontend-starter/src/app/components/profile-page/profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts)
+  - [`frontend-starter/src/app/components/profile-page/profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Nom affiché en direct dans la barre de navigation (`👤 Nom`) dès la connexion.
+  - Synchronisation bidirectionnelle immédiate entre la page profil et l'en-tête lors d'une mise à jour du nom.
+  - Disparition instantanée de toutes les informations utilisateur lors d'un clic sur « Déconnexion ».
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - **Qu'est-ce qu'un Signal Angular ?** : Une boîte enveloppant une valeur qui notifie automatiquement le moteur de rendu d'Angular dès que sa valeur change via `.set()` ou `.update()`, déclenchant un réaffichage chirurgical du DOM sans réévaluer l'ensemble de l'arbre des composants.
+  - **Rôle du service comme Source Unique de Vérité (*Single Source of Truth*)** : Un service injecté à la racine (`providedIn: 'root'`) est un singleton. En y plaçant le Signal `currentUser`, tous les composants de l'application partagent le même état d'authentification en temps réel.
+
