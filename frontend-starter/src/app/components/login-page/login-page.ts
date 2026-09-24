@@ -13,6 +13,8 @@ export class LoginPageComponent {
   private readonly router = inject(Router);
 
   readonly error = signal('');
+  readonly loading = signal(false);
+
   readonly form = new FormGroup({
     email: new FormControl('demo@example.com', {
       nonNullable: true,
@@ -25,14 +27,28 @@ export class LoginPageComponent {
   });
 
   submit(): void {
+    // Si la saisie est incomplète ou invalide, on ne lance pas la requête
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.loading.set(true);
+    this.error.set('');
+
     const values = this.form.getRawValue();
+
     this.auth.login(values.email, values.password).subscribe({
       next: () => {
+        this.loading.set(false);
         console.debug('[LoginPage] Connexion réussie');
+        // Redirection vers la bibliothèque de morceaux
         void this.router.navigateByUrl('/tracks');
       },
       error: (error: { error?: { message?: string } }) => {
+        this.loading.set(false);
         console.error('[LoginPage] Échec de connexion', error);
+        // Ex: "Identifiants incorrects" (erreur 401)
         this.error.set(error.error?.message ?? 'Erreur de connexion');
       },
     });

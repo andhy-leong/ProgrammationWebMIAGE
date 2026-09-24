@@ -1,12 +1,36 @@
 <section class="card">
   <h1>Connexion</h1>
+
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <label>Email<input type="email" formControlName="email" /></label>
-    <label>Mot de passe<input type="password" formControlName="password" /></label>
-    <button type="submit">Se connecter</button>
+    <label>
+      Email
+      <input type="email" formControlName="email" placeholder="demo@example.com" />
+      @if (form.controls.email.touched) {
+      @if (form.controls.email.errors?.['required']) {
+      <small class="error">L'email est obligatoire.</small>
+      } @else if (form.controls.email.errors?.['email']) {
+      <small class="error">Format d'email invalide.</small>
+      }
+      }
+    </label>
+
+    <label>
+      Mot de passe
+      <input type="password" formControlName="password" placeholder="••••••••" />
+      @if (form.controls.password.touched && form.controls.password.errors?.['required']) {
+      <small class="error">Le mot de passe est obligatoire.</small>
+      }
+    </label>
+
+    <button type="submit" [disabled]="loading()">
+      {{ loading() ? 'Connexion en cours...' : 'Se connecter' }}
+    </button>
   </form>
+
+  <!-- Message d'erreur serveur (ex: "Identifiants incorrects") -->
   @if (error()) {
-    <p class="error">{{ error() }}</p>
+  <p class="error">{{ error() }}</p>
   }
+
   <p><a routerLink="/register">Créer un compte</a></p>
 </section>
