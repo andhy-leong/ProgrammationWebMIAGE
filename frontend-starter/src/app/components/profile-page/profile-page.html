@@ -6,14 +6,24 @@
         <p class="subtitle">Gérez vos informations personnelles et la sécurité de votre compte</p>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn-secondary" (click)="load()" title="Recharger les données du profil">
-          Rafraîchir
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="load()"
+          [disabled]="profileLoading()"
+          title="Recharger les données du profil depuis le serveur"
+        >
+          @if (profileLoading()) { Chargement... } @else { Rafraîchir }
         </button>
         <button type="button" class="btn-logout-header" (click)="logout()" title="Se déconnecter de la session">
           Déconnexion
         </button>
       </div>
     </div>
+
+    @if (profileError()) {
+      <div class="alert alert-error">{{ profileError() }}</div>
+    }
 
     @if (auth.currentUser(); as user) {
       <div class="user-summary">

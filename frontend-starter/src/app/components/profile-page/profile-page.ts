@@ -30,6 +30,10 @@ export class ProfilePageComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  // État du chargement initial du profil (/api/users/me)
+  readonly profileLoading = signal(false);
+  readonly profileError = signal('');
+
   // État du formulaire de nom
   readonly nameMessage = signal('');
   readonly nameError = signal('');
@@ -75,12 +79,26 @@ export class ProfilePageComponent implements OnInit {
   }
 
   load(): void {
+    this.profileLoading.set(true);
+    this.profileError.set('');
+
     this.auth.profile().subscribe({
       next: (user) => {
-        console.debug('[ProfilePage] Profil chargé', user.id);
+        this.profileLoading.set(false);
+        console.debug('[ProfilePage] Profil chargé depuis /api/users/me', user.id);
         this.nameForm.setValue({ name: user.name });
       },
-      error: (error) => console.error('[ProfilePage] Chargement impossible', error),
+      error: (error: { status?: number; error?: { message?: string } }) => {
+        this.profileLoading.set(false);
+        console.error('[ProfilePage] Échec du chargement de /api/users/me', error);
+        if (error.status === 0) {
+          this.profileError.set('Impossible de joindre le serveur. Vérifiez que le backend est démarré.');
+        } else {
+          this.profileError.set(
+            error.error?.message ?? 'Impossible de récupérer les informations du profil.'
+          );
+        }
+      },
     });
   }
 
@@ -90,21 +108,31 @@ export class ProfilePageComponent implements OnInit {
       return;
     }
 
+    const newName = this.nameForm.getRawValue().name.trim();
+    if (newName.length < 2) {
+      this.nameError.set('Le nom doit comporter au moins 2 caractères.');
+      return;
+    }
+
     this.nameLoading.set(true);
     this.nameMessage.set('');
     this.nameError.set('');
 
-    const newName = this.nameForm.getRawValue().name;
     this.auth.update(newName).subscribe({
       next: (user) => {
         this.nameLoading.set(false);
-        this.nameMessage.set('Nom modifié avec succès');
-        console.debug('[ProfilePage] Profil enregistré', user.id);
+        this.nameMessage.set('Nom modifié avec succès.');
+        this.nameForm.setValue({ name: user.name });
+        console.debug('[ProfilePage] Nom mis à jour via PUT /api/users/me', user.id);
       },
-      error: (error: { error?: { message?: string } }) => {
+      error: (error: { status?: number; error?: { message?: string } }) => {
         this.nameLoading.set(false);
-        this.nameError.set(error.error?.message ?? 'Impossible de mettre à jour le nom');
-        console.error('[ProfilePage] Enregistrement impossible', error);
+        console.error('[ProfilePage] Échec de mise à jour du nom', error);
+        if (error.status === 0) {
+          this.nameError.set('Impossible de joindre le serveur. Vérifiez la connexion backend.');
+        } else {
+          this.nameError.set(error.error?.message ?? 'Impossible de mettre à jour le nom.');
+        }
       },
     });
   }

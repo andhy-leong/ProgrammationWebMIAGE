@@ -304,5 +304,115 @@
   - Pourquoi le nettoyage doit être double (disque + mémoire) : le `localStorage` doit être vidé pour empêcher la restauration de la session après F5, et les Signaux doivent être remis à `null` pour que l'interface graphique (DOM) et les Guards réagissent immédiatement sans recharger toute l'application.
   - Pourquoi centraliser ce nettoyage dans `AuthService.logout()` : afin que la déconnexion manuelle (bouton utilisateur), la déconnexion automatique sur token expiré (intercepteur 401) et la suppression de compte réutilisent exactement la même logique sécurisée.
 
+---
+
+### 8. Chargement de `/api/users/me` lorsque le profil est demandé
+
+- **Objectif** :  
+  Permettre à l'utilisateur de charger ses informations personnelles fraîches depuis la base de données MongoDB en effectuant une requête HTTP `GET /api/users/me` protégée par le jeton JWT, dès l'affichage de la page de profil (`/profile`) ou lors d'un clic sur le bouton « Rafraîchir ».
+
+- **Prompt principal** :  
+  > *« je veux que tu me fasse la partie chargement de `/api/users/me` lorsque le profil est demandé dans le fichier sujet_etudiant_tp1.md. J'aimerais que lorsque l'utilisateur veut voir son profil, le frontend doit utiliser une requête HTTP GET vers /api/users/me au backend pour récupérer ses informations personnelles depuis la base de données »*
+
+- **Plan proposé par l'agent** :  
+  1. Dans [`AuthService`](frontend-starter/src/app/shared/services/auth.service.ts), implémenter la méthode `profile()` qui émet la requête `GET /api/users/me` avec `HttpClient` et met à jour automatiquement le Signal `currentUser` via `tap((user) => this.currentUser.set(user))`.
+  2. Vérifier que [`authInterceptor`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) intercepte bien cette requête pour y injecter l'en-tête `Authorization: Bearer <token>`.
+  3. Dans [`ProfilePageComponent`](frontend-starter/src/app/components/profile-page/profile-page.ts) :
+     - Implémenter le hook de cycle de vie `ngOnInit()` pour déclencher `this.load()` dès l'ouverture de la page.
+     - Ajouter des signaux d'état dédiés : `profileLoading = signal(false)` et `profileError = signal('')`.
+     - Dans `load()`, souscrire à `this.auth.profile()` pour alimenter le formulaire (`nameForm.setValue({ name: user.name })`), et gérer les erreurs de connexion éventuelles.
+  4. Dans [`profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html) :
+     - Remplacer le contenu statique par les données réactives de l'utilisateur (`user.name`, `user.email`, `user.createdAt`, avatar dynamique).
+     - Relier le bouton « Rafraîchir » à `load()` en le désactivant (`[disabled]="profileLoading()"`) et en affichant un retour textuel pendant le chargement.
+     - Afficher une bannière d'erreur conditionnelle `@if (profileError())` en cas d'échec de communication.
+
+- **Vérifications réalisées par le binôme** :  
+  - **Inspection Réseau (Network tab)** :  
+    - Navigation vers `http://localhost:4200/profile` : émission instantanée de `GET /api/users/me`.
+    - Présence de l'en-tête de requête : `Authorization: Bearer <token>`.
+    - Code statut HTTP retourné par Express : `200 OK`.
+    - Corps JSON de la réponse : `{ "id": "...", "name": "...", "email": "...", "createdAt": "..." }`.
+  - **Affichage dynamique dans le DOM** : L'avatar circulaire prend la première lettre du prénom en majuscule, l'email et la date d'adhésion s'affichent correctement, et le champ « Nom complet » est prérempli avec la valeur issue de MongoDB.
+  - **Bouton Rafraîchir** : Un clic sur « Rafraîchir » déclenche une nouvelle requête `GET /api/users/me` visible dans les DevTools avec bascule temporaire du bouton à l'état `Chargement...`.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet du stockage des informations de profil complètes uniquement dans le JWT : le jeton ne doit contenir que le strict minimum (`sub`, `email`) et n'est pas actualisé si le nom change en base. Une requête `GET /api/users/me` garantit des données toujours fraîches.
+  - Rejet de l'appel direct de `HttpClient` dans `ProfilePageComponent` afin de respecter la séparation claire entre composants et services.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/services/auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts) : méthode `profile()` avec `HttpClient.get<User>('/api/users/me')`.
+  - [`frontend-starter/src/app/components/profile-page/profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts) : signaux `profileLoading` et `profileError`, méthode `load()` et hook `ngOnInit()`.
+  - [`frontend-starter/src/app/components/profile-page/profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html) : affichage dynamique des données, gestion du bouton de rafraîchissement et bannières d'alerte.
+
+- **Preuve de fonctionnement** :  
+  - Requête `GET /api/users/me` réussie avec statut 200 visible dans l'onglet Réseau des DevTools.
+  - Données du profil pré-remplies et synchronisées en temps réel avec MongoDB.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Le fonctionnement d'une route RESTful avec `me` : le backend sait qui fait la requête grâce au payload du JWT (`req.auth.sub`), sans qu'il soit nécessaire de passer l'identifiant dans l'URL.
+  - Le rôle de l'intercepteur HTTP : `authInterceptor` intercepte automatiquement chaque requête sortante vers l'API et y injecte le header `Authorization: Bearer <token>` sans que le composant ou le service n'ait à manipuler manuellement les en-têtes.
+
+---
+
+### 9. Modification du nom avec `PUT /api/users/me`
+
+- **Objectif** :  
+  Permettre à l'utilisateur de modifier son nom complet depuis son profil en émettant une requête HTTP `PUT /api/users/me` vers le backend Express, enregistrer la nouvelle valeur dans la base MongoDB, et mettre à jour l'affichage en temps réel sur la page profil et dans la barre de navigation sans rechargement de page.
+
+- **Prompt principal** :  
+  > *« je veux que tu me fasses la partie modification du nom avec `PUT /api/users/me` dans le fichier sujet_etudiant_tp1.md. Je veux que l'utilisateur doit pouvoir modifier son nom complet depuis son profil et que cette modification doit être envoyé au backend grace a une requête HTTP PUT pour enregistrer les modifications dans la base de données afin de l'afficher en temps réel sur la page profil »*
+
+- **Plan proposé par l'agent** :  
+  1. Côté Frontend Service ([`AuthService`](frontend-starter/src/app/shared/services/auth.service.ts)) :
+     - Implémenter `update(name: string)` émettant `HttpClient.put<User>('/api/users/me', { name })`.
+     - Chaîner l'opérateur RxJS `tap((user) => this.currentUser.set(user))` pour synchroniser instantanément le Signal réactif `currentUser` avec l'objet retourné par l'API.
+  2. Côté Frontend Composant ([`ProfilePageComponent`](frontend-starter/src/app/components/profile-page/profile-page.ts)) :
+     - Déclarer un formulaire réactif `nameForm` avec contrôle `name` (`Validators.required`, `Validators.minLength(2)`).
+     - Dans `saveName()`, valider le formulaire, nettoyer la saisie avec `.trim()`, activer l'état de chargement `nameLoading.set(true)`, et appeler `this.auth.update(newName)`.
+     - En cas de succès, afficher la confirmation visuelle (`nameMessage`), réinjecter la valeur normalisée et éteindre le spinner.
+     - En cas d'erreur (statut 0, 400, etc.), intercepter le retour et afficher un message d'alerte contextualisé (`nameError`).
+  3. Côté Frontend Template ([`profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html)) :
+     - Relier le formulaire à `[formGroup]="nameForm"` et `(ngSubmit)="saveName()"`.
+     - Exploiter la réactivité du Signal `auth.currentUser()` pour mettre à jour instantanément le titre `<h2>{{ user.name }}</h2>`, le badge avatar `{{ user.name.charAt(0) }}` et le nom dans l'en-tête global ([`app.html`](frontend-starter/src/app/components/app/app.html)).
+  4. Côté Backend ([`backend/src/app.js`](backend/src/app.js)) :
+     - Définir le handler `app.put('/api/users/me', auth, ...)` qui extrait `req.auth.sub`, exécute `User.findByIdAndUpdate(req.auth.sub, { $set: { name: req.body?.name } }, { new: true, runValidators: true })`, et répond avec le profil public `user.toPublic()`.
+
+- **Vérifications réalisées par le binôme** :  
+  - **Inspection Réseau (Network tab)** :  
+    - Modification du nom dans le champ puis clic sur « Enregistrer les modifications ».
+    - Émission de la requête HTTP : méthode `PUT`, URL `http://localhost:4200/api/users/me`.
+    - En-tête : `Authorization: Bearer <token>`, `Content-Type: application/json`.
+    - Corps JSON de la requête : `{ "name": "Valentin F." }`.
+    - Statut HTTP reçu : `200 OK`.
+    - Corps JSON de la réponse : objet utilisateur complet avec le nouveau `name`.
+  - **Réactivité instantanée dans le DOM** : Dès la réception de la réponse 200, le badge avec l'initiale, le titre de l'encart de profil et le bandeau de navigation (`👤 Valentin F.`) changent simultanément sans aucun rafraîchissement d'onglet.
+  - **Pérénité dans MongoDB** : Rafraîchissement complet (`F5`) de la page : le nouveau nom reste affiché car la persistance en base de données MongoDB Atlas est effective.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'envoi d'espaces blancs non nettoyés : ajout du `.trim()` pour éviter d'enregistrer des noms composés uniquement d'espaces.
+  - Rejet de la duplication d'état local : le composant profil ne gère pas son propre signal séparé pour le nom ; il délègue la vérité au Signal `AuthService.currentUser`, garantissant une cohérence globale dans toute l'application.
+
+- **Fichiers effectivement modifiés** :  
+  - Côté Frontend :  
+    - [`frontend-starter/src/app/shared/services/auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts) (méthode `update`)
+    - [`frontend-starter/src/app/components/profile-page/profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts) (gestion du formulaire et méthode `saveName`)
+    - [`frontend-starter/src/app/components/profile-page/profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html) (formulaire de nom, alertes et affichage réactif)
+  - Côté Backend (vérifié) :  
+    - [`backend/src/app.js`](backend/src/app.js) (route `app.put('/api/users/me')`)
+    - [`backend/src/models/User.js`](backend/src/models/User.js) (schéma Mongoose `name`)
+
+- **Preuve de fonctionnement** :  
+  - Requête HTTP `PUT /api/users/me` visible avec code 200 dans l'onglet Network.
+  - Message de succès vert « Nom modifié avec succès. » affiché sous le champ.
+  - Mise à jour immédiate et simultanée du badge avatar, du titre du profil et du header.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Réponse à la question du sujet (*« où s'effectue la tâche “mise à jour du profil utilisateur”, dans quels fichiers côté back et côté front ? »*) :
+    - Côté front : dans [`profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts) (UI), [`auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts) (appel HTTP + mise à jour du Signal) et [`auth.interceptor.ts`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) (injection du JWT).
+    - Côté back : dans [`backend/src/app.js`](backend/src/app.js) (route `app.put('/api/users/me')` protégée par le middleware `auth`) et [`backend/src/models/User.js`](backend/src/models/User.js) (modèle Mongoose).
+  - La sémantique HTTP : pourquoi utiliser `PUT` et non `POST` (car il s'agit d'une mise à jour idempotente d'une ressource existante identifiée).
+
+
+
 
 
