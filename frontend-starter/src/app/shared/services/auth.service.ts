@@ -62,7 +62,11 @@ export class AuthService {
   }
 
   logout(): void {
+    // 1. Suppression physique de toutes les traces de session sur la machine (disque / navigateur)
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.clear();
+
+    // 2. Réinitialisation de l'état réactif en mémoire vive (RAM) d'Angular
     this.token.set(null);
     this.currentUser.set(null);
   }

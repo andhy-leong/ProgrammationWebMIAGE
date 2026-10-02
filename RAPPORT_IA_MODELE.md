@@ -261,4 +261,48 @@
   - La méthode `router.navigateByUrl('/tracks')` résout la route cible de manière déclarative au sein du client Angular (SPA) sans faire de requête HTTP GET pour une nouvelle page HTML.
   - L'ordre d'exécution : la mise à jour synchrone du token dans `AuthService` (`tap(storeAuthentication)`) a lieu **avant** le callback `next` du composant, ce qui garantit que quand `router.navigateByUrl('/tracks')` est exécuté, [`authGuard`](frontend-starter/src/app/shared/guards/auth.guard.ts) vérifie `auth.token()` et laisse passer la navigation sans déclencher de redirection intempestive vers `/login`.
 
+---
+
+### 7. Bouton de déconnexion avec nettoyage de l’état local
+
+- **Objectif** :  
+  Permettre à l'utilisateur de mettre fin à sa session à tout moment via un bouton dédié (« Déconnexion »), en purgeant l'intégralité des traces de la session sur la machine (stockage persistant `localStorage`, `sessionStorage`) et en mémoire vive (Signaux Angular `token` et `currentUser`), puis en le redirigeant vers la page publique `/login`.
+
+- **Prompt principal** :  
+  > *« je veux que tu m'aides pour faire la partie bouton de déconnexion avec nettoyage de l'etat local dans le fichier sujet_etudiant_tp1.md. J'aimerais que quand on se déconnecte, l'application ne change pas simplement de page mais elle doit effacer toutes les traces de la session de l'utilisateur stockées sur la machine dans le navigateur»*
+
+- **Plan proposé par l'agent** :  
+  1. Dans [`AuthService`](frontend-starter/src/app/shared/services/auth.service.ts), centraliser l'effacement complet au sein de la méthode `logout()` :
+     - Supprimer la clé du jeton : `localStorage.removeItem(TOKEN_STORAGE_KEY)`.
+     - Vider tout stockage temporaire éventuel : `sessionStorage.clear()`.
+     - Réinitialiser l'état réactif d'Angular : `this.token.set(null)` et `this.currentUser.set(null)`.
+  2. Placer le bouton de déconnexion dans l'en-tête de navigation ([`app.html`](frontend-starter/src/app/components/app/app.html)) conditionné par `@if (auth.token())`, ainsi que sur la page de profil ([`profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html)).
+  3. Relier le clic `(click)="logout()"` dans [`AppComponent`](frontend-starter/src/app/components/app/app.ts) et [`ProfilePageComponent`](frontend-starter/src/app/components/profile-page/profile-page.ts) pour appeler `this.auth.logout()` puis déclencher la redirection : `void this.router.navigateByUrl('/login')`.
+  4. Réutiliser ce même mécanisme de déconnexion automatique lors de la réception d'une erreur HTTP 401 dans [`authInterceptor`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) ou lors de la suppression de compte (`deleteAccount()`).
+
+- **Vérifications réalisées par le binôme** :  
+  - **Test du clic de déconnexion** : Connexion préalable avec le compte de démonstration, puis clic sur le bouton « Déconnexion » dans la barre supérieure.
+  - **Vérification du stockage (DevTools)** : Onglet **Application > Storage > Local Storage** : la clé `gpc_token` disparaît instantanément.
+  - **Vérification de l'état en mémoire** : Le nom de l'utilisateur (`👤 Demo`) et les liens « Backing tracks » / « Profil » disparaissent immédiatement de la barre de navigation pour laisser place aux liens « Connexion » et « Inscription ».
+  - **Test de protection des routes (Guard)** : Tentative de retour en arrière avec le bouton précédent du navigateur ou saisie manuelle de `http://localhost:4200/tracks` : le guard [`authGuard`](frontend-starter/src/app/shared/guards/auth.guard.ts) intercepte l'absence de token et renvoie automatiquement vers `/login`.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'une simple redirection `router.navigateByUrl('/login')` sans purger le `localStorage` : la session réapparaîtrait au moindre rafraîchissement F5.
+  - Rejet de l'utilisation de `window.location.reload()` pour forcer la déconnexion : la purge explicite des Signals et du stockage respecte l'architecture SPA sans rechargement brutal de la page.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/services/auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts) : méthode `logout()` assurant le nettoyage complet de `localStorage`, `sessionStorage`, `token` et `currentUser`.
+  - [`frontend-starter/src/app/components/app/app.html`](frontend-starter/src/app/components/app/app.html) & [`frontend-starter/src/app/components/app/app.ts`](frontend-starter/src/app/components/app/app.ts) : bouton de déconnexion dans la barre de navigation et méthode `logout()`.
+  - [`frontend-starter/src/app/components/profile-page/profile-page.html`](frontend-starter/src/app/components/profile-page/profile-page.html) & [`frontend-starter/src/app/components/profile-page/profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts) : bouton secondaire de déconnexion dans l'en-tête du profil.
+
+- **Preuve de fonctionnement** :  
+  - Clé `gpc_token` effacée du Local Storage à la déconnexion.
+  - Réinitialisation instantanée de l'en-tête et redirection immédiate vers `/login`.
+  - Blocage effectif de l'accès aux pages protégées après déconnexion.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Pourquoi le nettoyage doit être double (disque + mémoire) : le `localStorage` doit être vidé pour empêcher la restauration de la session après F5, et les Signaux doivent être remis à `null` pour que l'interface graphique (DOM) et les Guards réagissent immédiatement sans recharger toute l'application.
+  - Pourquoi centraliser ce nettoyage dans `AuthService.logout()` : afin que la déconnexion manuelle (bouton utilisateur), la déconnexion automatique sur token expiré (intercepteur 401) et la suppression de compte réutilisent exactement la même logique sécurisée.
+
+
 
