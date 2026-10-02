@@ -90,6 +90,7 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - La différence entre les états de validation d'Angular : `touched` (le champ a perdu le focus au moins une fois), `dirty` (la valeur a changé), `invalid` (au moins une règle échoue).
   - Comment écrire un validateur personnalisé au niveau du `FormGroup` pour comparer deux champs dépendants (`control.get('password')?.value !== control.get('confirmPassword')?.value`).
+  ![alt text](image-3.png)
 
 ---
 
@@ -130,6 +131,7 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - Le flux complet d'une requête : Composant → `AuthService.login()` → `HttpClient.post()` → Proxy Angular (`proxy.conf.json` qui redirige vers le port 3000) → API Express (`app.post('/api/auth/login')`) → MongoDB (`User.findOne()`) → Réponse JSON.
   - Pourquoi le proxy Angular `proxy.conf.json` est nécessaire en développement pour éviter les blocages CORS.
+  ![alt text](image-4.png)
 
 ---
 
@@ -175,6 +177,7 @@
     - Le **`Signal`** est une primitive de réactivité en **mémoire vive** propre à Angular. Il notifie automatiquement les composants et déclenche le réaffichage du DOM dès que sa valeur change, mais il est volatil et disparaît au rechargement de la page.
     - Le **`localStorage`** est une API du navigateur qui écrit sur le **disque** du client. Les données y persistent même après fermeture du navigateur, mais il n'est pas réactif (Angular ne peut pas écouter nativement ses modifications).
     - **Architecture retenue** : Le `localStorage` assure la persistance inter-sessions, tandis que le `Signal` assure la réactivité intra-application.
+    ![alt text](image-5.png)
 
 ---
 
