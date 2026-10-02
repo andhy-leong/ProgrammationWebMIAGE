@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../shared/services/auth.service';
 
 @Component({
@@ -11,8 +11,14 @@ import { AuthService } from '../../shared/services/auth.service';
 export class LoginPageComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly error = signal('');
+  readonly sessionExpiredMessage = signal(
+    this.route.snapshot.queryParamMap.has('sessionExpired')
+      ? 'Votre session a expiré ou votre jeton est invalide. Veuillez vous reconnecter.'
+      : '',
+  );
   readonly loading = signal(false);
 
   readonly form = new FormGroup({
@@ -34,6 +40,7 @@ export class LoginPageComponent {
 
     this.loading.set(true);
     this.error.set('');
+    this.sessionExpiredMessage.set('');
 
     const values = this.form.getRawValue();
 

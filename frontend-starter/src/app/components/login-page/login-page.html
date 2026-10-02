@@ -2,6 +2,12 @@
   <h1>Connexion</h1>
   <p class="subtitle">Accédez à votre espace Guitar Practice Cloud</p>
 
+  @if (sessionExpiredMessage()) {
+    <div class="alert alert-info" role="status">
+      {{ sessionExpiredMessage() }}
+    </div>
+  }
+
   @if (error()) {
     <div class="alert alert-error" role="alert">
       {{ error() }}

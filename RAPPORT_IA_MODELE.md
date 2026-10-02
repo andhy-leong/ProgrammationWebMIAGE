@@ -412,6 +412,62 @@
     - Côté back : dans [`backend/src/app.js`](backend/src/app.js) (route `app.put('/api/users/me')` protégée par le middleware `auth`) et [`backend/src/models/User.js`](backend/src/models/User.js) (modèle Mongoose).
   - La sémantique HTTP : pourquoi utiliser `PUT` et non `POST` (car il s'agit d'une mise à jour idempotente d'une ressource existante identifiée).
 
+---
+
+### 10. Gestion d’un `401`, avec retour vers `/login` si le token est invalide ou expiré
+
+- **Objectif** :  
+  Intercepter de manière globale et transparente toute réponse HTTP `401 Unauthorized` provenant du backend (survenue lors de l'expiration du token après 2h ou en cas de jeton invalide/falsifié), purger l'état de session local (stockage et mémoire) via `AuthService.logout()`, et rediriger automatiquement l'utilisateur vers la page de connexion (`/login`) avec un message d'information explicatif.
+
+- **Prompt principal** :  
+  > *« j'aimerais que tu me fasse la partie gestion d’un `401`, avec retour vers `/login` si le token est invalide ou expiré. je veux que si je le token est expiré, ça redirige directement l'utilisateur sur la page de connexion et si l'erreur 401 vient de l'invaliditié du token alors je veux aussi que tu rediriges le client directement dans la page de de connexion»*
+
+- **Plan proposé par l'agent** :  
+  1. Dans l'intercepteur HTTP global [`authInterceptor`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) :
+     - Utiliser l'opérateur RxJS `catchError()` pour capturer toute erreur de type `HttpErrorResponse`.
+     - Vérifier la condition : `error.status === 401 && !request.url.includes('/api/auth/login')`. (L'exclusion de `/api/auth/login` évite une boucle de redirection en cas de mot de passe erroné lors de la saisie).
+     - Si l'erreur 401 survient (jeton expiré ou signature invalide) :
+       - Déclencher le nettoyage complet : `auth.logout()` (suppression de `gpc_token` du `localStorage`, `sessionStorage.clear()`, et remise à `null` des Signaux `token` et `currentUser`).
+       - Rediriger automatiquement vers `/login` en passant un paramètre de requête : `void router.navigate(['/login'], { queryParams: { sessionExpired: 'true' } })`.
+  2. Dans [`LoginPageComponent`](frontend-starter/src/app/components/login-page/login-page.ts) :
+     - Injecter `ActivatedRoute` et initialiser un Signal `sessionExpiredMessage` si le paramètre `sessionExpired` est détecté dans l'URL.
+     - Afficher une bannière d'information bleue conviviale dans [`login-page.html`](frontend-starter/src/app/components/login-page/login-page.html) : *« Votre session a expiré ou votre jeton est invalide. Veuillez vous reconnecter. »*.
+     - Réinitialiser le message dès qu'une nouvelle tentative de connexion est soumise.
+  3. Dans le guard [`authGuard`](frontend-starter/src/app/shared/guards/auth.guard.ts) :
+     - Confirmer que l'absence de jeton suite au `logout()` bloque l'accès aux routes protégées et renvoie tout accès direct vers `/login`.
+
+- **Vérifications réalisées par le binôme** :  
+  - **Simulation de token falsifié/invalide** :  
+    - Modification manuelle du token dans `localStorage` (altération de quelques caractères de la signature JWT via l'onglet Application des DevTools).
+    - Tentative de navigation vers `/tracks` ou clic sur « Rafraîchir » dans le profil.
+    - Émission de la requête avec le token corrompu → Réponse immédiate du backend Express : `401 Unauthorized` (`{ "message": "Jeton invalide ou expiré" }`).
+    - Comportement observé : `authInterceptor` intercepte le 401, purge la session, et redirige instantanément vers `http://localhost:4200/login?sessionExpired=true`.
+    - Affichage immédiat de la bannière bleue d'avertissement : *« Votre session a expiré ou votre jeton est invalide. Veuillez vous reconnecter. »*.
+  - **Simulation de token expiré** :  
+    - Vérification du middleware backend [`backend/src/app.js`](backend/src/app.js#L57-L78) : `jwt.verify(token, SECRET)` lève automatiquement une `TokenExpiredError` après 2 heures, interceptée de la même façon par `authInterceptor`.
+  - **Non-interférence avec la page de connexion** :  
+    - Saisie d'un mot de passe incorrect sur `/login` : le backend renvoie un 401, mais l'intercepteur ignore cette URL et laisse [`LoginPageComponent`](frontend-starter/src/app/components/login-page/login-page.ts) afficher le message d'erreur rouge approprié (*« Identifiants incorrects »*) sans recharger la page.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de la gestion des erreurs 401 au cas par cas dans chaque composant ou service : l'intercepteur HTTP centralise 100% des flux d'erreur réseau en un point unique, évitant tout oubli et toute duplication.
+  - Rejet de la redirection brutale sans avertissement à l'utilisateur : le paramètre `sessionExpired=true` et la bannière informative expliquent clairement la raison du retour au formulaire de connexion.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/interceptors/auth.interceptor.ts`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) : détection de l'erreur 401, appel de `auth.logout()` et redirection avec query param.
+  - [`frontend-starter/src/app/components/login-page/login-page.ts`](frontend-starter/src/app/components/login-page/login-page.ts) : lecture du query param via `ActivatedRoute` et gestion de `sessionExpiredMessage`.
+  - [`frontend-starter/src/app/components/login-page/login-page.html`](frontend-starter/src/app/components/login-page/login-page.html) : affichage de la bannière d'information `.alert-info`.
+  - [`frontend-starter/src/app/components/login-page/login-page.css`](frontend-starter/src/app/components/login-page/login-page.css) : style visuel de la bannière d'information.
+
+- **Preuve de fonctionnement** :  
+  - Erreur 401 visible dans l'onglet Réseau des DevTools.
+  - Redirection automatique et immédiate de l'URL vers `/login?sessionExpired=true`.
+  - Purge intégrale du `localStorage` et affichage clair de l'alerte invitant à se reconnecter.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Le cycle de vie d'un intercepteur HTTP : il s'insère comme un middleware côté client sur la chaîne de traitement `HttpClient`, permettant d'enrichir la requête à l'aller (`Authorization`) et d'intercepter les statuts HTTP au retour (`catchError`).
+  - Pourquoi exclure `/api/auth/login` de la capture 401 : pour ne pas confondre une tentative de connexion avec de mauvais identifiants (qui doit rester sur la page de login avec le formulaire en rouge) et une session protégée expirée (qui nécessite un nettoyage de session et une redirection).
+
+
 
 
 

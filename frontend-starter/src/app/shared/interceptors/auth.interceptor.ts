@@ -23,9 +23,9 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
         error.status === 401 &&
         !request.url.includes('/api/auth/login')
       ) {
-        console.warn('[authInterceptor] Jeton expiré ou invalide (401), déconnexion.');
+        console.warn('[authInterceptor] Jeton expiré ou invalide (401), déconnexion et redirection vers /login.');
         auth.logout();
-        void router.navigateByUrl('/login');
+        void router.navigate(['/login'], { queryParams: { sessionExpired: 'true' } });
       }
       return throwError(() => error);
     }),
