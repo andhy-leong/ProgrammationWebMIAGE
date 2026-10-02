@@ -46,6 +46,8 @@
   - L'utilité de `{ nonNullable: true }` pour garantir que `.value` ou `.getRawValue()` renvoie toujours des chaînes de caractères et non `null` après un `.reset()`.
 
   ![alt text](image.png)
+  ![alt text](image-1.png)
+  ![alt text](image-2.png)
 
 ---
 
