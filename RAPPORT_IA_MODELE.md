@@ -226,6 +226,7 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - **Qu'est-ce qu'un Signal Angular ?** : Une boîte enveloppant une valeur qui notifie automatiquement le moteur de rendu d'Angular dès que sa valeur change via `.set()` ou `.update()`, déclenchant un réaffichage chirurgical du DOM sans réévaluer l'ensemble de l'arbre des composants.
   - **Rôle du service comme Source Unique de Vérité (*Single Source of Truth*)** : Un service injecté à la racine (`providedIn: 'root'`) est un singleton. En y plaçant le Signal `currentUser`, tous les composants de l'application partagent le même état d'authentification en temps réel.
+  ![alt text](image-6.png)
 
 ---
 
@@ -267,6 +268,8 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - La méthode `router.navigateByUrl('/tracks')` résout la route cible de manière déclarative au sein du client Angular (SPA) sans faire de requête HTTP GET pour une nouvelle page HTML.
   - L'ordre d'exécution : la mise à jour synchrone du token dans `AuthService` (`tap(storeAuthentication)`) a lieu **avant** le callback `next` du composant, ce qui garantit que quand `router.navigateByUrl('/tracks')` est exécuté, [`authGuard`](frontend-starter/src/app/shared/guards/auth.guard.ts) vérifie `auth.token()` et laisse passer la navigation sans déclencher de redirection intempestive vers `/login`.
+  ![alt text](image-7.png)
+  ![alt text](image-8.png)
 
 ---
 
@@ -310,6 +313,8 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - Pourquoi le nettoyage doit être double (disque + mémoire) : le `localStorage` doit être vidé pour empêcher la restauration de la session après F5, et les Signaux doivent être remis à `null` pour que l'interface graphique (DOM) et les Guards réagissent immédiatement sans recharger toute l'application.
   - Pourquoi centraliser ce nettoyage dans `AuthService.logout()` : afin que la déconnexion manuelle (bouton utilisateur), la déconnexion automatique sur token expiré (intercepteur 401) et la suppression de compte réutilisent exactement la même logique sécurisée.
+  ![alt text](image-9.png)
+  ![alt text](image-10.png)
 
 ---
 
@@ -358,6 +363,7 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - Le fonctionnement d'une route RESTful avec `me` : le backend sait qui fait la requête grâce au payload du JWT (`req.auth.sub`), sans qu'il soit nécessaire de passer l'identifiant dans l'URL.
   - Le rôle de l'intercepteur HTTP : `authInterceptor` intercepte automatiquement chaque requête sortante vers l'API et y injecte le header `Authorization: Bearer <token>` sans que le composant ou le service n'ait à manipuler manuellement les en-têtes.
+  ![alt text](image-11.png)
 
 ---
 
@@ -418,6 +424,7 @@
     - Côté front : dans [`profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts) (UI), [`auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts) (appel HTTP + mise à jour du Signal) et [`auth.interceptor.ts`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) (injection du JWT).
     - Côté back : dans [`backend/src/app.js`](backend/src/app.js) (route `app.put('/api/users/me')` protégée par le middleware `auth`) et [`backend/src/models/User.js`](backend/src/models/User.js) (modèle Mongoose).
   - La sémantique HTTP : pourquoi utiliser `PUT` et non `POST` (car il s'agit d'une mise à jour idempotente d'une ressource existante identifiée).
+  ![alt text](image-12.png)
 
 ---
 
@@ -473,7 +480,10 @@
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - Le cycle de vie d'un intercepteur HTTP : il s'insère comme un middleware côté client sur la chaîne de traitement `HttpClient`, permettant d'enrichir la requête à l'aller (`Authorization`) et d'intercepter les statuts HTTP au retour (`catchError`).
   - Pourquoi exclure `/api/auth/login` de la capture 401 : pour ne pas confondre une tentative de connexion avec de mauvais identifiants (qui doit rester sur la page de login avec le formulaire en rouge) et une session protégée expirée (qui nécessite un nettoyage de session et une redirection).
-
+![alt text](image-13.png)
+Je change manuellement le gpc_token
+![alt text](image-14.png)
+![alt text](image-15.png)
 
 
 
