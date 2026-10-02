@@ -45,6 +45,8 @@
   - Pourquoi privilégier les formulaires réactifs aux formulaires pilotés par le template (meilleure séparation des responsabilités, testabilité directe dans la classe TypeScript, contrôle synchrone du statut de validation).
   - L'utilité de `{ nonNullable: true }` pour garantir que `.value` ou `.getRawValue()` renvoie toujours des chaînes de caractères et non `null` après un `.reset()`.
 
+  ![alt text](image.png)
+
 ---
 
 ### 2. Validations et messages d'erreur compréhensibles
