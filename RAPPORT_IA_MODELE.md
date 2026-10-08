@@ -485,7 +485,64 @@ Je change manuellement le gpc_token
 ![alt text](image-14.png)
 ![alt text](image-15.png)
 
+---
 
+# Rapport d'usage de l'IA — TP2
 
+## Mission 2 — Bibliothèque paginée
 
+---
 
+### 1. Bibliothèque paginée et gestion réactive avec Signals
+
+- **Objectif** :  
+  Représenter l'état complet de la bibliothèque audio de manière réactive et découplée à l'aide des Angular Signals (`tracks`, `page`, `pages`, `loading`, `error`), afficher uniquement les morceaux de la page courante via la pagination serveur (`GET /api/tracks?page=...&limit=...`), gérer le rendu avec le nouveau Control Flow (`@if`, `@for`, `@empty`) et sécuriser la navigation avec des boutons désactivés aux bornes.
+
+- **Prompt principal** :  
+  > *«je travaille actuellement sur le sujet_etudiant_tp2.md. je veux que l'état de l'écran soit réactif et découplé, stocké dans des signals la liste des 'tracks': il faut que ça contient uniquement les morceaux de la page affichés»*
+
+- **Plan proposé par l'agent** :  
+  1. Déclarer 5 Signals indépendants dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) :
+     - `readonly tracks = signal<Track[]>([])` pour contenir strictement les morceaux de la page active.
+     - `readonly page = signal(1)` pour mémoriser l'index de page courante.
+     - `readonly pages = signal(1)` pour refléter le total de pages calculé par le serveur.
+     - `readonly loading = signal(false)` pour le statut de chargement asynchrone.
+     - `readonly error = signal<string | null>(null)` pour capturer et afficher un échec éventuel de l'appel HTTP.
+  2. Ajuster la méthode `load()` :
+     - Réinitialiser l'erreur (`this.error.set(null)`) et activer le chargement (`this.loading.set(true)`).
+     - Appeler `TrackService.list(this.page(), 5)` qui émet une requête HTTP avec `?page=...&limit=5`.
+     - À la réception du résultat (`next`), mettre à jour `tracks`, `pages` et repasser `loading` à `false`.
+     - En cas d'erreur (`error`), affecter un message compréhensible à `this.error` et couper `loading`.
+  3. Sécuriser la méthode `go(page)` avec un contrôle aux bornes (`1 <= page <= pages()`) avant d'émettre la nouvelle requête.
+  4. Mettre à jour le template HTML ([`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)) :
+     - Consommer les signaux par appel direct `tracks()`, `page()`, `pages()`, `loading()`, `error()`.
+     - Utiliser `@if (loading())`, `@if (error())`, `@for (track of tracks(); track track.id)` et `@empty`.
+     - Désactiver les boutons de pagination aux bornes : `[disabled]="page() === 1"` et `[disabled]="page() >= pages()"`.
+  5. Ajouter le style CSS pour la bannière d'erreur `.alert-error` dans [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css).
+
+- **Vérifications réalisées par le binôme** :  
+  - Observation des requêtes dans l'onglet Network : à chaque clic sur « Suivant » ou « Précédent », une requête ciblée `GET /api/tracks?page=X&limit=5` est bien émise.
+  - Vérification de la liste `tracks()` : elle ne contient que les 5 pistes de la page active, aucun découpage local par `.slice()` n'est effectué.
+  - Test des boutons bornés : « Précédent » est désactivé sur la page 1 ; « Suivant » est désactivé sur la dernière page.
+  - Test de l'état vide : si aucune piste n'existe, le bloc `@empty` affiche « Aucune piste. ».
+  - Test de l'indicateur d'erreur : en cas de coupure de l'API ou de panne réseau, la bannière `.alert-error` s'affiche avec le message du Signal `error()`.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de la pagination côté client (charger toutes les pistes et découper en local dans Angular) : formellement interdite par le sujet car elle sature la mémoire et le réseau en cas de volumétrie importante.
+  - Rejet de l'utilisation de `BehaviorSubject` ou de directives structurelles obsolètes (`*ngIf`, `*ngFor`) au profit du Control Flow natif (`@if`, `@for`) et des Signals Angular modernes.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Requêtes HTTP `GET /api/tracks?page=...&limit=5` observées dans l'inspecteur réseau.
+  - Mise à jour réactive sans rechargement de page.
+  - Désactivation fluide des boutons aux bornes et affichage propre de l'état de chargement et des erreurs.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Pourquoi et comment utiliser les Signals Angular pour découpler l'état : les signaux notifient automatiquement le moteur de détection de changement (Zoneless-ready) sans surcoût.
+  - La différence fondamentale entre pagination serveur (charge réseau proportionnelle à la taille de la page) et pagination client (charge réseau proportionnelle à la taille totale de la base de données).
+  - La syntaxe du nouveau Control Flow `@for ... track track.id` avec le bloc `@empty` intégré.
+![alt text](image-16.png)

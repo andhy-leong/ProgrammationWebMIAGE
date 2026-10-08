@@ -15,6 +15,7 @@ export class TracksPageComponent {
   readonly page = signal(1);
   readonly pages = signal(1);
   readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
   readonly audioUrl = signal('');
   readonly title = new FormControl('', { nonNullable: true });
   file?: File;
@@ -30,6 +31,7 @@ export class TracksPageComponent {
 
   load(): void {
     this.loading.set(true);
+    this.error.set(null);
     this.service.list(this.page()).subscribe({
       next: (response) => {
         console.debug('[TracksPage] Pistes chargées', response.items.length);
@@ -39,12 +41,16 @@ export class TracksPageComponent {
       },
       error: (error) => {
         console.error('[TracksPage] Chargement impossible', error);
+        this.error.set('Impossible de charger les pistes depuis le serveur.');
         this.loading.set(false);
       },
     });
   }
 
   go(page: number): void {
+    if (page < 1 || (this.pages() > 0 && page > this.pages())) {
+      return;
+    }
     this.page.set(page);
     this.load();
   }

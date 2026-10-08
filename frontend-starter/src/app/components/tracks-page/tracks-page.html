@@ -21,6 +21,9 @@
       @if (loading()) {
         <p>Chargement…</p>
       }
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
       @for (track of tracks(); track track.id) {
         <div class="track">
           <div>
