@@ -35,11 +35,15 @@
       } @empty {
         <p>Aucune piste.</p>
       }
-      <div class="pager">
-        <button type="button" (click)="go(page() - 1)" [disabled]="loading() || page() <= 1">Préc.</button>
-        <span>Page {{ page() }} / {{ pages() }}</span>
-        <button type="button" (click)="go(page() + 1)" [disabled]="loading() || page() >= pages()">Suiv.</button>
-      </div>
+      <mat-paginator
+        [length]="total()"
+        [pageSize]="limit()"
+        [pageSizeOptions]="[5, 10, 20]"
+        [pageIndex]="page() - 1"
+        [disabled]="loading()"
+        (page)="onPageChange($event)"
+        aria-label="Pagination des pistes">
+      </mat-paginator>
       @if (audioUrl()) {
         <audio [src]="audioUrl()" controls autoplay></audio>
       }

@@ -656,3 +656,41 @@ Je change manuellement le gpc_token
   - Bannière rouge `.alert-error` affichée dynamiquement dès la réception d'une erreur HTTP.
   - Disparition automatique de la bannière dès qu'une nouvelle requête est lancée avec succès.
   ![alt text](image-20.png)
+
+---
+
+### 6. Intégration avancée du composant MatPaginator d'Angular Material
+
+- **Objectif** :  
+  Intégrer le composant graphique officiel `<mat-paginator>` issu de `@angular/material/paginator` pour enrichir la pagination de la bibliothèque audio avec le choix de taille de page (5, 10, 20), l'affichage du total d'éléments et la navigation accessible, tout en reliant ses événements à la logique réactive par Signals.
+
+- **Prompt principal** :  
+  > *« j'aimerais que dans la page tu me rajoutes le composant paginator de la biblithèque graphique angular material comme ça : https://material.angular.dev/components/paginator/overview »*
+
+- **Plan proposé par l'agent** :  
+  1. Installer `@angular/material` et `@angular/cdk` dans `frontend-starter`.
+  2. Importer le thème Angular Material (`@angular/material/prebuilt-themes/azure-blue.css`) dans [`src/styles.css`](frontend-starter/src/styles.css).
+  3. Importer `MatPaginatorModule` et le type `PageEvent` dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts).
+  4. Ajouter les Signaux `total = signal(0)` et `limit = signal(5)` alimentés par la réponse de `TrackService.list(this.page(), this.limit())`.
+  5. Implémenter le gestionnaire d'événement `onPageChange(event: PageEvent)` pour synchroniser `limit.set(event.pageSize)` et `page.set(event.pageIndex + 1)` (conversion de l'index 0-based de Material vers l'index 1-based de l'API).
+  6. Remplacer les boutons manuels par `<mat-paginator>` dans [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html).
+
+- **Vérifications réalisées par le binôme** :  
+  - Observation du composant dans le navigateur : le Paginator Material s'affiche avec le sélecteur « Items per page » (5, 10, 20), l'indicateur de plage (« 1 – 5 of X ») et les flèches directionnelles.
+  - Test de changement de taille de page : sélection de « 10 » -> émission d'une requête `GET /api/tracks?page=1&limit=10` et mise à jour instantanée du nombre de pistes affichées.
+  - Test de navigation : clic sur page suivante -> passage à l'index Material 1 correspondant à `page = 2` dans la requête backend.
+  - Désactivation automatique pendant le chargement : `[disabled]="loading()"` désactive l'ensemble des contrôles du paginator pendant les appels HTTP.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'incohérence d'indexation : `MatPaginator` utilise une base 0 (`pageIndex: 0, 1, 2...`) alors que l'API MongoDB utilise une base 1 (`page: 1, 2, 3...`). L'oubli de la conversion `+ 1` / `- 1` provoquerait des décalages de page.
+  - Rejet de l'omission du thème CSS Material : sans `@import` de thème, le paginator apparaîtrait déstructuré et sans icônes vectorielles.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/package.json`](frontend-starter/package.json)
+  - [`frontend-starter/src/styles.css`](frontend-starter/src/styles.css)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Composant `mat-paginator` actif et stylisé sur `http://localhost:4200/tracks`.
+  - Changement dynamique de page et de taille de page (5, 10, 20) répercuté sur l'API et la liste des pistes.
