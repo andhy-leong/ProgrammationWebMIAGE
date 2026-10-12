@@ -41,10 +41,6 @@
 - **Preuve de fonctionnement** :  
   - Formulaires fonctionnels avec extraction typée des données via `this.form.getRawValue()`. Bouton de soumission désactivé pendant le chargement (`[disabled]="loading()"`).
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Pourquoi privilégier les formulaires réactifs aux formulaires pilotés par le template (meilleure séparation des responsabilités, testabilité directe dans la classe TypeScript, contrôle synchrone du statut de validation).
-  - L'utilité de `{ nonNullable: true }` pour garantir que `.value` ou `.getRawValue()` renvoie toujours des chaînes de caractères et non `null` après un `.reset()`.
-
   ![alt text](image.png)
   ![alt text](image-1.png)
   ![alt text](image-2.png)
@@ -87,9 +83,6 @@
 - **Preuve de fonctionnement** :  
   - Messages d'erreur explicites sous les champs lors de saisies invalides ; coloration rouge immédiate ; messages d'erreur HTTP traduits et affichés dans les bannières d'alerte.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - La différence entre les états de validation d'Angular : `touched` (le champ a perdu le focus au moins une fois), `dirty` (la valeur a changé), `invalid` (au moins une règle échoue).
-  - Comment écrire un validateur personnalisé au niveau du `FormGroup` pour comparer deux champs dépendants (`control.get('password')?.value !== control.get('confirmPassword')?.value`).
   ![alt text](image-3.png)
 
 ---
@@ -128,9 +121,6 @@
 - **Preuve de fonctionnement** :  
   - Requêtes observables dans l'onglet Network (statuts 200 et 201) ; mise à jour instantanée du composant et redirection vers les routes protégées.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Le flux complet d'une requête : Composant → `AuthService.login()` → `HttpClient.post()` → Proxy Angular (`proxy.conf.json` qui redirige vers le port 3000) → API Express (`app.post('/api/auth/login')`) → MongoDB (`User.findOne()`) → Réponse JSON.
-  - Pourquoi le proxy Angular `proxy.conf.json` est nécessaire en développement pour éviter les blocages CORS.
   ![alt text](image-4.png)
 
 ---
@@ -171,12 +161,6 @@
 - **Preuve de fonctionnement** :  
   - Token visible et persistant dans l'onglet **Application > Local Storage** ; console DevTools exempte de tout log de token.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - **Pourquoi ne jamais logger un JWT ?** : Le JWT est un jeton d'authentification au porteur (*Bearer token*). Toute personne ou script malveillant (extension de navigateur compromise, attaque XSS) accédant à la console ou aux logs peut dérober ce token et usurper l'identité de l'utilisateur sans connaître son mot de passe.
-  - **Différence fondamentale entre `Signal` et `localStorage`** :
-    - Le **`Signal`** est une primitive de réactivité en **mémoire vive** propre à Angular. Il notifie automatiquement les composants et déclenche le réaffichage du DOM dès que sa valeur change, mais il est volatil et disparaît au rechargement de la page.
-    - Le **`localStorage`** est une API du navigateur qui écrit sur le **disque** du client. Les données y persistent même après fermeture du navigateur, mais il n'est pas réactif (Angular ne peut pas écouter nativement ses modifications).
-    - **Architecture retenue** : Le `localStorage` assure la persistance inter-sessions, tandis que le `Signal` assure la réactivité intra-application.
     ![alt text](image-5.png)
 
 ---
@@ -223,9 +207,6 @@
   - Synchronisation bidirectionnelle immédiate entre la page profil et l'en-tête lors d'une mise à jour du nom.
   - Disparition instantanée de toutes les informations utilisateur lors d'un clic sur « Déconnexion ».
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - **Qu'est-ce qu'un Signal Angular ?** : Une boîte enveloppant une valeur qui notifie automatiquement le moteur de rendu d'Angular dès que sa valeur change via `.set()` ou `.update()`, déclenchant un réaffichage chirurgical du DOM sans réévaluer l'ensemble de l'arbre des composants.
-  - **Rôle du service comme Source Unique de Vérité (*Single Source of Truth*)** : Un service injecté à la racine (`providedIn: 'root'`) est un singleton. En y plaçant le Signal `currentUser`, tous les composants de l'application partagent le même état d'authentification en temps réel.
   ![alt text](image-6.png)
 
 ---
@@ -265,9 +246,6 @@
   - Redirection automatique et instantanée vers `/tracks` après connexion et inscription.
   - L'URL dans la barre d'adresse devient bien `http://localhost:4200/tracks` avec affichage de la liste des morceaux et du formulaire d'envoi.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - La méthode `router.navigateByUrl('/tracks')` résout la route cible de manière déclarative au sein du client Angular (SPA) sans faire de requête HTTP GET pour une nouvelle page HTML.
-  - L'ordre d'exécution : la mise à jour synchrone du token dans `AuthService` (`tap(storeAuthentication)`) a lieu **avant** le callback `next` du composant, ce qui garantit que quand `router.navigateByUrl('/tracks')` est exécuté, [`authGuard`](frontend-starter/src/app/shared/guards/auth.guard.ts) vérifie `auth.token()` et laisse passer la navigation sans déclencher de redirection intempestive vers `/login`.
   ![alt text](image-7.png)
   ![alt text](image-8.png)
 
@@ -310,9 +288,6 @@
   - Réinitialisation instantanée de l'en-tête et redirection immédiate vers `/login`.
   - Blocage effectif de l'accès aux pages protégées après déconnexion.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Pourquoi le nettoyage doit être double (disque + mémoire) : le `localStorage` doit être vidé pour empêcher la restauration de la session après F5, et les Signaux doivent être remis à `null` pour que l'interface graphique (DOM) et les Guards réagissent immédiatement sans recharger toute l'application.
-  - Pourquoi centraliser ce nettoyage dans `AuthService.logout()` : afin que la déconnexion manuelle (bouton utilisateur), la déconnexion automatique sur token expiré (intercepteur 401) et la suppression de compte réutilisent exactement la même logique sécurisée.
   ![alt text](image-9.png)
   ![alt text](image-10.png)
 
@@ -360,9 +335,6 @@
   - Requête `GET /api/users/me` réussie avec statut 200 visible dans l'onglet Réseau des DevTools.
   - Données du profil pré-remplies et synchronisées en temps réel avec MongoDB.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Le fonctionnement d'une route RESTful avec `me` : le backend sait qui fait la requête grâce au payload du JWT (`req.auth.sub`), sans qu'il soit nécessaire de passer l'identifiant dans l'URL.
-  - Le rôle de l'intercepteur HTTP : `authInterceptor` intercepte automatiquement chaque requête sortante vers l'API et y injecte le header `Authorization: Bearer <token>` sans que le composant ou le service n'ait à manipuler manuellement les en-têtes.
   ![alt text](image-11.png)
 
 ---
@@ -419,11 +391,6 @@
   - Message de succès vert « Nom modifié avec succès. » affiché sous le champ.
   - Mise à jour immédiate et simultanée du badge avatar, du titre du profil et du header.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Réponse à la question du sujet (*« où s'effectue la tâche “mise à jour du profil utilisateur”, dans quels fichiers côté back et côté front ? »*) :
-    - Côté front : dans [`profile-page.ts`](frontend-starter/src/app/components/profile-page/profile-page.ts) (UI), [`auth.service.ts`](frontend-starter/src/app/shared/services/auth.service.ts) (appel HTTP + mise à jour du Signal) et [`auth.interceptor.ts`](frontend-starter/src/app/shared/interceptors/auth.interceptor.ts) (injection du JWT).
-    - Côté back : dans [`backend/src/app.js`](backend/src/app.js) (route `app.put('/api/users/me')` protégée par le middleware `auth`) et [`backend/src/models/User.js`](backend/src/models/User.js) (modèle Mongoose).
-  - La sémantique HTTP : pourquoi utiliser `PUT` et non `POST` (car il s'agit d'une mise à jour idempotente d'une ressource existante identifiée).
   ![alt text](image-12.png)
 
 ---
@@ -477,9 +444,6 @@
   - Redirection automatique et immédiate de l'URL vers `/login?sessionExpired=true`.
   - Purge intégrale du `localStorage` et affichage clair de l'alerte invitant à se reconnecter.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Le cycle de vie d'un intercepteur HTTP : il s'insère comme un middleware côté client sur la chaîne de traitement `HttpClient`, permettant d'enrichir la requête à l'aller (`Authorization`) et d'intercepter les statuts HTTP au retour (`catchError`).
-  - Pourquoi exclure `/api/auth/login` de la capture 401 : pour ne pas confondre une tentative de connexion avec de mauvais identifiants (qui doit rester sur la page de login avec le formulaire en rouge) et une session protégée expirée (qui nécessite un nettoyage de session et une redirection).
 ![alt text](image-13.png)
 Je change manuellement le gpc_token
 ![alt text](image-14.png)
@@ -541,8 +505,4 @@ Je change manuellement le gpc_token
   - Mise à jour réactive sans rechargement de page.
   - Désactivation fluide des boutons aux bornes et affichage propre de l'état de chargement et des erreurs.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Pourquoi et comment utiliser les Signals Angular pour découpler l'état : les signaux notifient automatiquement le moteur de détection de changement (Zoneless-ready) sans surcoût.
-  - La différence fondamentale entre pagination serveur (charge réseau proportionnelle à la taille de la page) et pagination client (charge réseau proportionnelle à la taille totale de la base de données).
-  - La syntaxe du nouveau Control Flow `@for ... track track.id` avec le bloc `@empty` intégré.
 ![alt text](image-16.png)
