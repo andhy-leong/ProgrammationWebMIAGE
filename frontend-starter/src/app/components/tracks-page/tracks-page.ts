@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Track } from '../../shared/models/track.model';
@@ -39,9 +40,13 @@ export class TracksPageComponent {
         this.pages.set(response.pages);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: (error: HttpErrorResponse) => {
         console.error('[TracksPage] Chargement impossible', error);
-        this.error.set('Impossible de charger les pistes depuis le serveur.');
+        const message =
+          error.status === 0
+            ? 'Serveur inaccessible. Vérifiez votre connexion ou l’état du backend.'
+            : (error.error?.message ?? 'Impossible de charger les pistes depuis le serveur.');
+        this.error.set(message);
         this.loading.set(false);
       },
     });

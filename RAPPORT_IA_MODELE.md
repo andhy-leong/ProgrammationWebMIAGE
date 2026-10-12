@@ -615,3 +615,44 @@ Je change manuellement le gpc_token
   - Message « Chargement des pistes en cours… » affiché dynamiquement via `@if (loading())`.
   - Boutons désactivés de manière réactive pendant la durée exacte de la requête HTTP.
   ![alt text](image-19.png)
+
+---
+
+### 5. Représentation réactive de l'erreur éventuelle avec un Signal
+
+- **Objectif** :  
+  Représenter l'état d'erreur de manière réactive à l'aide d'un Signal Angular `readonly error = signal<string | null>(null)`, réinitialisé à `null` à chaque nouveau chargement et valorisé par un message contextualisé en cas d'échec de la requête HTTP, afin d'afficher instantanément une bannière d'alerte sans interrompre l'expérience utilisateur ni faire planter l'application.
+
+- **Prompt principal** :  
+  > *« je veux que tu me fasses la partie où je dois représenter avec des sig,ales l'erreur éventuelle en stockant un message d'erreur, reinitialisé à null au début de chaque chargement et valorisé en cas d'échec de la requête HTTP pour permettre d'afficher instantanément une bannière d'alerte explicative pour informer l'utilisateur sans faire buger l'application »*
+
+- **Plan proposé par l'agent** :  
+  1. Déclarer le Signal `readonly error = signal<string | null>(null)` dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts).
+  2. Au début de `load()`, purger systématiquement l'état d'erreur précédent : `this.error.set(null)`.
+  3. Dans le callback `error` de `this.service.list(...).subscribe(...)` :
+     - Intercepter l'objet typé `HttpErrorResponse`.
+     - Générer un message adapté selon la cause (ex. serveur éteint ou panne réseau statut 0 vs erreur retournée par l'API `error.error?.message`).
+     - Affecter le message au signal via `this.error.set(message)`.
+     - Désactiver le chargement `this.loading.set(false)`.
+  4. Dans le template [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html), afficher la bannière d'alerte via `@if (error()) { <div class="alert alert-error">{{ error() }}</div> }`.
+
+- **Vérifications réalisées par le binôme** :  
+  - Simulation de panne serveur (arrêt temporaire du backend ou case Offline cochée dans l'onglet Network des DevTools) :
+    - Clic sur « Actualiser » : la bannière d'alerte rouge `Serveur inaccessible. Vérifiez votre connexion ou l’état du backend.` s'affiche immédiatement.
+    - L'application reste stable, sans page blanche ni crash Angular.
+  - Rétablissement de la connexion et nouveau clic sur « Actualiser » :
+    - L'erreur est instantanément effacée (`this.error.set(null)`), le chargement s'exécute et la liste s'affiche dès la réponse 200.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet du blocage global de l'interface ou de la levée d'exceptions non interceptées (`throw error`) : l'interception gracieuse avec message réactif préserve la navigation.
+  - Rejet de l'oubli de réinitialiser l'erreur à `null` au début de chaque tentative : l'ancienne erreur persisterait à l'écran même lors d'une tentative réussie.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Bannière rouge `.alert-error` affichée dynamiquement dès la réception d'une erreur HTTP.
+  - Disparition automatique de la bannière dès qu'une nouvelle requête est lancée avec succès.
+  ![alt text](image-20.png)
