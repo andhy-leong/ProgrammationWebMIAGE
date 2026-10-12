@@ -13,3 +13,13 @@
   border: 1px solid #f5c2c7;
   color: #c5221f;
 }
+
+.loading-state {
+  color: #5f6368;
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

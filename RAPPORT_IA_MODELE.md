@@ -506,3 +506,112 @@ Je change manuellement le gpc_token
   - Désactivation fluide des boutons aux bornes et affichage propre de l'état de chargement et des erreurs.
 
 ![alt text](image-16.png)
+
+---
+
+### 2. Représentation réactive de la page courante `page` avec un Signal
+
+- **Objectif** :  
+  Gérer l'index de pagination de manière réactive à l'aide d'un Signal Angular `readonly page = signal(1)`, afin de synchroniser dynamiquement la valeur courante avec la requête HTTP `GET /api/tracks?page=...&limit=5`, d'afficher le numéro de page dans le template et de désactiver automatiquement les boutons « Précédent » et « Suivant » aux bornes.
+
+- **Prompt principal** :  
+  > *« je veux que pour la partie où il faut représenter avec des signals la page courante 'page', tu  stocks le numéro de la page active dans une variable réactive afin de transmettre dynamiquement sa valeur au paramètre de requête HTTP. Je veux que tu fasses cela pour que la template puisse réagir instantanément  pour afficher le numéro de page actuel et désactiver automatiquement les boutons précédent et suivant aux bornes »*
+
+- **Plan proposé par l'agent** :  
+  1. Déclarer le Signal `readonly page = signal(1)` dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) pour suivre l'état de la page active.
+  2. Transmettre sa valeur réactive `this.page()` dans l'appel `this.service.list(this.page())` afin d'émettre la requête HTTP paginée vers l'API.
+  3. Mettre en place la méthode `go(page: number)` pour mettre à jour le signal (`this.page.set(page)`) et relancer `load()` uniquement si la cible est valide (`1 <= page <= pages()`).
+  4. Lier le Signal dans le template [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) pour afficher `Page {{ page() }} / {{ pages() }}` et conditionner la désactivation des boutons aux bornes : `[disabled]="page() <= 1"` et `[disabled]="page() >= pages()"`.
+
+- **Vérifications réalisées par le binôme** :  
+  - Vérification de l'état initial : sur la page 1, le bouton « Précédent » est bien désactivé (`disabled`).
+  - Clic sur « Suivant » : la méthode `go(page() + 1)` incrémente `page` à 2, déclenchant une requête `GET /api/tracks?page=2&limit=5` et l'affichage immédiat de `Page 2 / X`.
+  - Clic jusqu'à la dernière page : dès que `page() >= pages()`, le bouton « Suivant » se désactive automatiquement.
+  - Inspection réseau DevTools : chaque pagination émet une nouvelle requête ciblée sans rechargement de page.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'une simple variable primitive `page = 1` sans Signal : le template ne bénéficierait pas de la réactivité fine d'Angular et nécessiterait des cycles de détection de changement globaux.
+  - Rejet de l'utilisation de `page() === 1` au profit de `page() <= 1` pour éviter tout état incohérent aux bornes.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Désactivation automatique et visuelle des boutons « Précédent » et « Suivant » aux bornes `1` et `pages()`.
+  - Affichage en temps réel du compteur `Page {{ page() }} / {{ pages() }}` dans le template.
+  - Requêtes HTTP envoyées avec le paramètre `?page=X` correspondant à la page active.
+  ![alt text](image-17.png)
+
+---
+
+### 3. Représentation réactive du nombre total de pages `pages` avec un Signal
+
+- **Objectif** :  
+  Représenter le nombre total de pages à l'aide d'un Signal Angular `readonly pages = signal(1)`, synchroniser sa valeur à chaque réponse HTTP renvoyée par le serveur (`this.pages.set(response.pages)`), afficher dynamiquement ce total dans le template (`Page {{ page() }} / {{ pages() }}`) et désactiver automatiquement les boutons de pagination « Précédent » et « Suivant » aux bornes.
+
+- **Prompt principal** :  
+  > *« je veux que pour la partie où il faut représenter avec des signals le nombre total de pages 'pages', tu stockes la valeur calculée et renvoyée par le serveur dans une variable réactive mise à jour à chaque réponse HTTP. Je veux que tu fasses ça pour permettre au template d'afficher dynamiquement le nombre total de pages et de désactiver aussi les boutons précédents et suivant »*
+
+- **Plan proposé par l'agent** :  
+  1. Déclarer le Signal `readonly pages = signal(1)` dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) pour suivre le total de pages disponibles.
+  2. Dans la méthode `load()`, mettre à jour ce Signal lors de chaque réponse HTTP réussie via `this.pages.set(response.pages)`.
+  3. Exploiter la valeur de `pages()` dans la méthode `go(page: number)` pour interdire tout changement de page au-delà du maximum autorisé (`page > this.pages()`).
+  4. Dans le template [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html), afficher `Page {{ page() }} / {{ pages() }}` et conditionner la désactivation du bouton « Suivant » avec `[disabled]="page() >= pages()"` ainsi que le bouton « Précédent » avec `[disabled]="page() <= 1"`.
+
+- **Vérifications réalisées par le binôme** :  
+  - Observation du template lors du chargement : si la base contient 7 morceaux avec une limite de 5 par page, le backend renvoie `pages: 2`, et le template affiche directement `Page 1 / 2`.
+  - Vérification du bouton « Suivant » : actif tant que `page() < pages()`, puis automatiquement désactivé dès que la dernière page est atteinte (`page() === pages()`).
+  - Cas d'une seule page (`pages() === 1`) : les deux boutons « Précédent » (`1 <= 1`) et « Suivant » (`1 >= 1`) sont simultanément désactivés.
+  - Ajout d'un morceau via `upload()` : réinitialisation sur la page 1 et recalcul immédiat de `pages` par le serveur reflété dans l'interface sans rechargement.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'un calcul local du nombre de pages côté frontend (`Math.ceil(tracks().length / limit)`) : ce calcul serait erroné car `tracks()` ne contient que les pistes de la page courante et non l'ensemble de la base de données.
+  - Rejet de l'utilisation d'une propriété simple non réactive : un signal garantit que la mise à jour de `pages` déclenche immédiatement le rafraîchissement des boutons et de l'affichage dans le DOM.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Réactivité instantanée de l'affichage `Page {{ page() }} / {{ pages() }}` dès la réception du payload JSON `{ items: [...], total: X, pages: Y }`.
+  - Boutons de pagination correctement désactivés aux deux bornes (`page() <= 1` et `page() >= pages()`).
+  ![alt text](image-18.png)
+
+---
+
+### 4. Représentation réactive de l'état de chargement `loading` avec un Signal
+
+- **Objectif** :  
+  Créer un indicateur d'état booléen réactif à l'aide d'un Signal Angular `readonly loading = signal(false)`, passant à `true` dès le déclenchement de la requête HTTP et revenant systématiquement à `false` à la réception de la réponse ou lors d'une erreur, afin d'afficher un retour visuel clair informant l'utilisateur pendant l'attente des données et de désactiver les interactions concurrentes.
+
+- **Prompt principal** :  
+  > *« je veux que pour la partie où il faut représenter avec des signal l'état de chargelent 'loading', tu crées un booleen qui passe à true dès le lancement de la requete et revient à false dès la reception de la reponse ou d'une erreur. je veux avoir une affichage qui va informer l'utilisateur oendant l'attente des données »*
+
+- **Plan proposé par l'agent** :  
+  1. Déclarer le Signal `readonly loading = signal(false)` dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts).
+  2. Dans la méthode `load()`, activer le signal avec `this.loading.set(true)` juste avant l'appel à `this.service.list(...)`.
+  3. Dans le callback `next`, repasser le signal à `false` via `this.loading.set(false)` après l'assignation des données.
+  4. Dans le callback `error`, repasser impérativement le signal à `false` via `this.loading.set(false)` pour éviter que l'interface ne reste bloquée en cas de panne réseau.
+  5. Dans le template [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html), afficher un message d'information conditionné par `@if (loading())` et désactiver les boutons de navigation et d'actualisation (`[disabled]="loading()"`).
+  6. Styliser l'indicateur `.loading-state` dans [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css).
+
+- **Vérifications réalisées par le binôme** :  
+  - Clic sur « Actualiser » ou sur un bouton de pagination : le texte « Chargement des pistes en cours… » s'affiche immédiatement.
+  - Les boutons « Actualiser », « Préc. » et « Suiv. » sont temporairement désactivés pendant le transit réseau, évitant les clics intempestifs et les requêtes en doublon.
+  - Dès réception de la réponse 200, le message de chargement disparaît pour laisser place à la liste des pistes.
+  - En simulant une coupure réseau (mode Offline dans les DevTools) : le message de chargement disparaît et laisse place à la bannière d'erreur rouge, confirmant que le signal repasse bien à `false` dans le bloc `error`.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'oubli de `loading.set(false)` dans le bloc `error` : l'application afficherait indéfiniment « Chargement… » sans avertir l'utilisateur d'un échec.
+  - Rejet d'un spinner bloquant tout l'écran : le retour contextuel ciblé dans la carte « Mes pistes » offre une meilleure ergonomie sans masquer le formulaire d'envoi.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Message « Chargement des pistes en cours… » affiché dynamiquement via `@if (loading())`.
+  - Boutons désactivés de manière réactive pendant la durée exacte de la requête HTTP.
+  ![alt text](image-19.png)
