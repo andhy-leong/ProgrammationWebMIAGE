@@ -694,3 +694,4 @@ Je change manuellement le gpc_token
 - **Preuve de fonctionnement** :  
   - Composant `mat-paginator` actif et stylisé sur `http://localhost:4200/tracks`.
   - Changement dynamique de page et de taille de page (5, 10, 20) répercuté sur l'API et la liste des pistes.
+  ![alt text](image-21.png)
