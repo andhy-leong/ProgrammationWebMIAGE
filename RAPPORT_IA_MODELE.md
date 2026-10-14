@@ -818,6 +818,42 @@ Je change manuellement le gpc_token
   ![alt text](image-23.png)
   ![alt text](image-24.png)
 
+---
 
+### 10. Formatage lisible de la taille et de la date avec Pipes Angular (`FileSizePipe` et `DatePipe`)
 
+- **Objectif** :  
+  Améliorer la lisibilité des métadonnées audio sur chaque carte en transformant les données brutes issues de MongoDB : conversion adaptative des octets en unités lisibles (`o`, `Ko`, `Mo`) via un Pipe personnalisé standalone `FileSizePipe`, et formatage de la date d'enregistrement UTC (ISO 8601) en date locale lisible `jj/mm/aaaa hh:mm` via le `DatePipe` natif d'Angular.
 
+- **Prompt principal** :  
+  > *« je veux implémenter le formatage lisible de la taille et de la date d'ajout pour les morceaux. Je veux que tu affiches clairement le nom original, la taille formatée et la date d'ajout au format jj/mm/aaaa hh:mm sur chaque carte »*
+
+- **Plan proposé par l'agent** :  
+  1. Créer le Pipe standalone [`FileSizePipe`](frontend-starter/src/app/shared/pipes/file-size.pipe.ts) implémentant `PipeTransform` pour convertir dynamiquement les octets selon des seuils calculés (< 1024 o, < 1024 Ko, Mo).
+  2. Importer `DatePipe` (provenant de `@angular/common`) et `FileSizePipe` dans le tableau `imports` de [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts).
+  3. Mettre à jour le template [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) au niveau des détails de piste pour afficher : `{{ track.originalName }} · {{ track.size | fileSize }} · Ajouté le {{ track.createdAt | date:'dd/MM/yyyy HH:mm' }}`.
+  4. Valider le typage et le bundle avec `npm run build`.
+
+- **Vérifications réalisées par le binôme** :  
+  - Contrôle visuel sur chaque carte : un fichier de 1 542 031 octets n'affiche plus l'erreur trompeuse `1542031 Ko`, mais la valeur exacte calculée `1.47 Mo`.
+  - Contrôle de la date : l'horodatage brut ISO `"2026-10-14T11:45:32.412Z"` est transformé en chaîne lisible `14/10/2026 13:45`.
+  - Maintien du nom original du fichier audio téléversé à côté des métadonnées.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'un calcul manuel dans le contrôleur TypeScript modifiant directement l'objet `Track` : l'utilisation d'un Pipe pur (`pure: true` par défaut) est la convention Angular par excellence, préservant l'intégrité de l'objet de données et n'exécutant la transformation que lorsque la valeur change.
+  - Rejet d'une fonction appelée directement dans le template `formatSize(track.size)` : une fonction dans le template serait réexécutée à chaque cycle de détection de changement, pénalisant les performances par rapport à un Pipe pur mémoïsé.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/pipes/file-size.pipe.ts`](frontend-starter/src/app/shared/pipes/file-size.pipe.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Affichage propre sur l'interface : `Ajouté le 14/10/2026 13:45 · 1.47 Mo`.
+  - Compilation sans erreur validée par `npm run build`.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Comment créer et utiliser un Pipe Angular standalone avec le décorateur `@Pipe` et la méthode `transform()`.
+  - Pourquoi privilégier un Pipe pur à une méthode de composant appelée dans le template HTML (mémoïsation et optimisation de la détection de changements).
+  - Comment utiliser le `DatePipe` natif avec un masque de formatage personnalisé (`'dd/MM/yyyy HH:mm'`).
+![alt text](image-25.png)

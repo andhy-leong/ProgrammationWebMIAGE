@@ -55,7 +55,7 @@
         <div class="track">
           <div class="track-details">
             <b>{{ track.title }}</b>
-            <small>{{ track.originalName }} · {{ track.size }} Ko</small>
+            <small>{{ track.originalName }} · {{ track.size | fileSize }} · Ajouté le {{ track.createdAt | date:'dd/MM/yyyy HH:mm' }}</small>
           </div>
           <div class="track-actions">
             <button

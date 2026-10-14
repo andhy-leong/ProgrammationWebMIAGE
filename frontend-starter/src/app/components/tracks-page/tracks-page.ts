@@ -1,12 +1,14 @@
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Track } from '../../shared/models/track.model';
+import { FileSizePipe } from '../../shared/pipes/file-size.pipe';
 import { TrackService } from '../../shared/services/track.service';
 
 @Component({
-  imports: [ReactiveFormsModule, MatPaginatorModule],
+  imports: [ReactiveFormsModule, MatPaginatorModule, DatePipe, FileSizePipe],
   templateUrl: './tracks-page.html',
   styleUrl: './tracks-page.css',
 })
