@@ -702,5 +702,7 @@ Je change manuellement le gpc_token
 
 -  Le backend envoie-t-il le fichier entier en mémoire ou peut-il l’envoyer progressivement depuis le disque ?
 - --> Le backend ne charge pas le fichier entier en mémoire vive mais l'envoie progressivement depuis le disque  par paquet grâce à un flux de lecture Node.js sur la réponse HTTP
+- Avec `HttpClient` et `responseType: "blob"`, à quel moment le composant reçoit-il généralement le fichier ?
+- --> Le composant reçoit le fichier uniquement lorsque son téléchargement est entièrement terminé, car `HttpClient` attend la fin complète du transfert réseau pour instancier et émettre le `Blob`
 
 
