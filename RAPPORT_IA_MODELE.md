@@ -759,6 +759,7 @@ Je change manuellement le gpc_token
   - Comment configurer `HttpClient.post` avec `{ reportProgress: true, observe: 'events' }` pour recevoir un flux continu de `HttpEvent`.
   - Comment différencier `HttpEventType.UploadProgress` (octets chargés vs octets totaux) et `HttpEventType.Response` (réception de l'entité créée par le serveur).
   - Comment relier la progression à un Signal Angular et l'injecter dynamiquement dans le style CSS d'une barre de chargement via `[style.width.%]="uploadProgress()"`.
+  ![alt text](image-37.png)
 ![alt text](image-22.png)
 
 ---
@@ -1020,3 +1021,19 @@ Je change manuellement le gpc_token
   - Comment déclencher un sélecteur de fichier HTML de manière accessible et ergonomique sans afficher l'élément natif `input[type="file"]`.
   ![alt text](image-30.png)
   ![alt text](image-31.png)
+
+---
+
+### 14. Checkpoint 
+- que chaque changement de page modifie le paramètre `page` ;
+  ![alt text](image-32.png)
+- que l’upload est bien multipart et contient `audio` et `title` ;
+  ![alt text](image-34.png)
+- que la réponse de lecture est un flux audio ;
+  ![alt text](image-35.png)
+- qu’une erreur `400` est affichée pour un fichier invalide ;
+  ![alt text](image-36.png)
+- qu’une piste ne peut être lue que par son propriétaire.
+![alt text](image-38.png)
+![alt text](image-39.png)
+![alt text](image-40.png)
