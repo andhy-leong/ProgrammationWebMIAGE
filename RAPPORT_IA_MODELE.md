@@ -711,5 +711,55 @@ Je change manuellement le gpc_token
 - Pourquoi l'URL créée par `URL.createObjectURL` doit-elle être révoquée ?
 - --> L'URL doit être révoquée via `URL.revokeObjectURL()` pour rompre la référence interne conservée par le navigateur et permettre au Garbage Collector de libérer la mémoire vive allouée au `Blob`, évitant ainsi les fuites de mémoire
 
+---
+
+### 8. Barre de progression réactive de l'upload avec Signals et HttpEventType
+
+- **Objectif** :  
+  Informer l'utilisateur en temps réel de l'état d'avancement du téléversement de fichiers audio lourds (jusqu'à 25 Mo) à l'aide d'une barre de progression animée pilotée par Signals (`uploadProgress`, `uploading`), en interceptant les événements de transfert `HttpEventType.UploadProgress` d'`HttpClient` (`reportProgress: true`, `observe: 'events'`), et en gérant le verrouillage du formulaire ainsi que les messages de succès et d'erreur.
+
+- **Prompt principal** :  
+  > *« je veux que tu me rajoute une barre de progression quand j'upload des musiques pour tenir l'utilisateur informé de l'état de l'upload »*
+
+- **Plan proposé par l'agent** :  
+  1. Configurer la méthode `upload(file, title)` dans [`TrackService`](frontend-starter/src/app/shared/services/track.service.ts) avec `{ reportProgress: true, observe: 'events' }` pour observer le flux d'événements `HttpEvent<Track>`.
+  2. Déclarer les Signals d'état dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) :
+     - `readonly uploading = signal(false)` : verrouille le bouton et les champs pour éviter les soumissions concurrentes.
+     - `readonly uploadProgress = signal(0)` : mémorise le pourcentage d'avancement calculé (0 à 100 %).
+     - `readonly uploadSuccess = signal<string | null>(null)` et `uploadError = signal<string | null>(null)` : affichent des alertes contextuelles.
+  3. Dans la méthode `upload(fileInput)` de [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts), filtrer les événements selon leur type :
+     - `HttpEventType.UploadProgress` : calculer `Math.round((100 * event.loaded) / event.total)` et mettre à jour `uploadProgress`.
+     - `HttpEventType.Response` : finaliser à 100 %, afficher le message de succès, réinitialiser le formulaire (`title`, `file`, champ input fichier) et recharger la page 1 de la bibliothèque (`this.page.set(1); this.load()`).
+     - `error` : capturer l'échec, repasser `uploading` à `false` et afficher un message d'alerte explicite.
+  4. Enrichir le template [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) avec le conteneur de progression `@if (uploading())`, la jauge dynamique `[style.width.%]="uploadProgress()"` et le label de pourcentage.
+  5. Styliser les composants dans [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css) (dégradé fluide, transition animée, bannière de succès verte).
+
+- **Vérifications réalisées par le binôme** :  
+  - Sélection d'un fichier audio et clic sur « Envoyer » : la barre de progression s'affiche instantanément sous le bouton avec le libellé « Téléversement du fichier… X% ».
+  - Pendant le transit réseau, le champ titre, le sélecteur de fichier et le bouton d'envoi sont désactivés (`[disabled]="uploading()"`), empêchant tout double clic.
+  - À la complétion (statut HTTP 201), la barre atteint 100 %, le message de confirmation vert « Piste « ... » importée avec succès. » s'affiche, le formulaire est vidé et la liste des pistes est automatiquement actualisée sur la première page.
+  - En cas de coupure réseau pendant l'upload, l'alerte d'erreur rouge apparaît et l'état de chargement est nettoyé.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'utilisation de `setInterval` simulant une fausse progression : l'observation des événements réels du socket réseau via `HttpEventType.UploadProgress` garantit une mesure technique exacte des octets transférés (`event.loaded / event.total`).
+  - Rejet de l'omission de `observe: 'events'` : sans cette option, `HttpClient` n'émet que la réponse finale (`HttpResponse`) et supprime tous les événements intermédiaires de progression.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/services/track.service.ts`](frontend-starter/src/app/shared/services/track.service.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Compilation réussie sans aucune erreur TypeScript ou Angular (`npm run build`).
+  - Jauge animée réactive reflétant le pourcentage `uploadProgress()`.
+  - Désactivation complète des contrôles et réinitialisation propre du formulaire à l'issue de l'envoi.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Comment configurer `HttpClient.post` avec `{ reportProgress: true, observe: 'events' }` pour recevoir un flux continu de `HttpEvent`.
+  - Comment différencier `HttpEventType.UploadProgress` (octets chargés vs octets totaux) et `HttpEventType.Response` (réception de l'entité créée par le serveur).
+  - Comment relier la progression à un Signal Angular et l'injecter dynamiquement dans le style CSS d'une barre de chargement via `[style.width.%]="uploadProgress()"`.
+![alt text](image-22.png)
+
 
 

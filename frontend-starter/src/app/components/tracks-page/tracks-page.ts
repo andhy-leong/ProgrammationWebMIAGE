@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -20,6 +20,10 @@ export class TracksPageComponent {
   readonly limit = signal(5);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly uploading = signal(false);
+  readonly uploadProgress = signal(0);
+  readonly uploadSuccess = signal<string | null>(null);
+  readonly uploadError = signal<string | null>(null);
   readonly audioUrl = signal('');
   readonly title = new FormControl('', { nonNullable: true });
   file?: File;
@@ -30,6 +34,9 @@ export class TracksPageComponent {
 
   choose(event: Event): void {
     this.file = (event.target as HTMLInputElement).files?.[0];
+    this.uploadSuccess.set(null);
+    this.uploadError.set(null);
+    this.uploadProgress.set(0);
     console.debug('[TracksPage] Fichier sélectionné', this.file?.name);
   }
 
@@ -70,18 +77,45 @@ export class TracksPageComponent {
     this.load();
   }
 
-  upload(): void {
-    if (!this.file) return;
+  upload(fileInput?: HTMLInputElement): void {
+    if (!this.file || this.uploading()) return;
 
-    this.service.upload(this.file, this.title.value || this.file.name).subscribe({
-      next: (track) => {
-        console.debug('[TracksPage] Piste envoyée', track.id);
-        this.title.setValue('');
-        this.file = undefined;
-        this.page.set(1);
-        this.load();
+    this.uploading.set(true);
+    this.uploadProgress.set(0);
+    this.uploadSuccess.set(null);
+    this.uploadError.set(null);
+
+    const uploadedFileName = this.file.name;
+    const trackTitle = this.title.value || uploadedFileName;
+
+    this.service.upload(this.file, trackTitle).subscribe({
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          const progress = Math.round((100 * event.loaded) / event.total);
+          this.uploadProgress.set(progress);
+        } else if (event.type === HttpEventType.Response) {
+          const track = event.body;
+          console.debug('[TracksPage] Piste envoyée', track?.id);
+          this.uploadProgress.set(100);
+          this.uploading.set(false);
+          this.uploadSuccess.set(`Piste « ${track?.title ?? trackTitle} » importée avec succès.`);
+          this.title.setValue('');
+          this.file = undefined;
+          if (fileInput) fileInput.value = '';
+          this.page.set(1);
+          this.load();
+        }
       },
-      error: (error) => console.error('[TracksPage] Envoi impossible', error),
+      error: (error: HttpErrorResponse) => {
+        console.error('[TracksPage] Envoi impossible', error);
+        this.uploading.set(false);
+        this.uploadProgress.set(0);
+        const message =
+          error.status === 0
+            ? 'Serveur inaccessible lors du téléversement.'
+            : (error.error?.message ?? "Erreur lors de l'envoi de la piste.");
+        this.uploadError.set(message);
+      },
     });
   }
 

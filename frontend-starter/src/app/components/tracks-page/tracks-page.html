@@ -8,9 +8,30 @@
   <div class="grid">
     <article class="card">
       <h2>Importer</h2>
-      <label>Titre<input [formControl]="title" /></label>
-      <label>Fichier audio<input type="file" accept="audio/*" (change)="choose($event)" /></label>
-      <button type="button" (click)="upload()" [disabled]="!file">Envoyer</button>
+      <label>Titre<input [formControl]="title" [disabled]="uploading()" /></label>
+      <label>Fichier audio<input #fileInput type="file" accept="audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
+      <button type="button" (click)="upload(fileInput)" [disabled]="!file || uploading()">
+        {{ uploading() ? 'Envoi en cours…' : 'Envoyer' }}
+      </button>
+
+      @if (uploading()) {
+        <div class="progress-box">
+          <div class="progress-bar-container">
+            <div class="progress-bar" [style.width.%]="uploadProgress()"></div>
+          </div>
+          <div class="progress-info">
+            <span>Téléversement du fichier…</span>
+            <span><strong>{{ uploadProgress() }}%</strong></span>
+          </div>
+        </div>
+      }
+
+      @if (uploadSuccess()) {
+        <div class="alert alert-success">{{ uploadSuccess() }}</div>
+      }
+      @if (uploadError()) {
+        <div class="alert alert-error">{{ uploadError() }}</div>
+      }
     </article>
 
     <article class="card">
