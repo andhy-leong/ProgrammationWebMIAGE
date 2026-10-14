@@ -695,3 +695,12 @@ Je change manuellement le gpc_token
   - Composant `mat-paginator` actif et stylisé sur `http://localhost:4200/tracks`.
   - Changement dynamique de page et de taille de page (5, 10, 20) répercuté sur l'API et la liste des pistes.
   ![alt text](image-21.png)
+
+---
+
+### 7. Analyse du transfert audio backend : mémoire vive vs streaming disque
+
+-  Le backend envoie-t-il le fichier entier en mémoire ou peut-il l’envoyer progressivement depuis le disque ?
+- --> Le backend ne charge pas le fichier entier en mémoire vive mais l'envoie progressivement depuis le disque  par paquet grâce à un flux de lecture Node.js sur la réponse HTTP
+
+
