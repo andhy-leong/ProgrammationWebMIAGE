@@ -48,10 +48,47 @@
       @if (deleteError()) {
         <div class="alert alert-error">{{ deleteError() }}</div>
       }
-      @if (error()) {
-        <div class="alert alert-error">{{ error() }}</div>
-      }
-      @for (track of tracks(); track track.id) {
+      <!-- Barre d'outils : Filtrage et Tri -->
+      <div class="filter-toolbar">
+        <div class="search-field">
+          <input
+            type="search"
+            placeholder="Rechercher par titre ou nom de fichier…"
+            [value]="searchFilter()"
+            (input)="setSearch($event)"
+            aria-label="Rechercher un morceau"
+          />
+        </div>
+        <div class="filter-controls">
+          <label class="inline-select">
+            <span>Trier par</span>
+            <select [value]="sortBy()" (change)="setSort($event)" aria-label="Trier les morceaux">
+              <option value="date-desc">Date (récentes)</option>
+              <option value="date-asc">Date (anciennes)</option>
+              <option value="title-asc">Nom (A → Z)</option>
+              <option value="title-desc">Nom (Z → A)</option>
+              <option value="size-asc">Taille (croissante)</option>
+              <option value="size-desc">Taille (décroissante)</option>
+            </select>
+          </label>
+          <label class="inline-select">
+            <span>Taille</span>
+            <select [value]="sizeFilter()" (change)="setSizeFilter($event)" aria-label="Filtrer par taille">
+              <option value="all">Toutes</option>
+              <option value="small">&lt; 1 Mo</option>
+              <option value="medium">1 à 5 Mo</option>
+              <option value="large">&gt; 5 Mo</option>
+            </select>
+          </label>
+          @if (hasActiveFilters()) {
+            <button type="button" class="btn-reset-filters" (click)="resetFilters()" title="Réinitialiser tous les filtres">
+              Effacer
+            </button>
+          }
+        </div>
+      </div>
+
+      @for (track of filteredTracks(); track track.id) {
         <div class="track">
           <div class="track-details">
             <b>{{ track.title }}</b>
@@ -77,7 +114,11 @@
           </div>
         </div>
       } @empty {
-        <p>Aucune piste.</p>
+        @if (hasActiveFilters()) {
+          <p class="empty-hint">Aucun morceau ne correspond à vos filtres actuels.</p>
+        } @else {
+          <p>Aucune piste.</p>
+        }
       }
       <mat-paginator
         [length]="total()"

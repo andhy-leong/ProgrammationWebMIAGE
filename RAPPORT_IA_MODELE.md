@@ -855,5 +855,52 @@ Je change manuellement le gpc_token
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - Comment créer et utiliser un Pipe Angular standalone avec le décorateur `@Pipe` et la méthode `transform()`.
   - Pourquoi privilégier un Pipe pur à une méthode de composant appelée dans le template HTML (mémoïsation et optimisation de la détection de changements).
-  - Comment utiliser le `DatePipe` natif avec un masque de formatage personnalisé (`'dd/MM/yyyy HH:mm'`).
 ![alt text](image-25.png)
+
+---
+
+### 11. Filtrage et tri dynamiques des pistes (titre/nom, taille, date) avec Signals et `computed()`
+
+- **Objectif** :  
+  Permettre à l'utilisateur de rechercher, filtrer et trier en temps réel ses pistes audio : recherche textuelle instantanée par titre ou nom de fichier original, tri multi-critères (date récente/ancienne, nom alphabétique A-Z/Z-A, taille croissante/décroissante) et filtrage par tranche de poids (< 1 Mo, 1 à 5 Mo, > 5 Mo), entièrement pilotés par des Signals Angular (`searchFilter`, `sortBy`, `sizeFilter`) et combinés de façon pure et mémoïsée via un Signal dérivé `computed()`.
+
+- **Prompt principal** :  
+  > *« je veux rajouter différent filtre (nom, date de modification, taille, ...) »*
+
+- **Plan proposé par l'agent** :  
+  1. Déclarer dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) les Signals d'état du filtre :
+     - `readonly searchFilter = signal('')` : chaîne de recherche saisie.
+     - `readonly sortBy = signal<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'size-asc' | 'size-desc'>('date-desc')` : critère actif de tri.
+     - `readonly sizeFilter = signal<'all' | 'small' | 'medium' | 'large'>('all')` : tranche de taille sélectionnée.
+  2. Créer le Signal dérivé `readonly filteredTracks = computed(() => { ... })` qui filtre la liste des pistes en mémoire (`tracks()`) par texte et par taille, puis applique le tri sélectionné sans altérer la source de données originale.
+  3. Ajouter le Signal réactif `readonly hasActiveFilters = computed(...)` pour afficher dynamiquement un bouton de réinitialisation (« Effacer »).
+  4. Intégrer dans [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) une barre d'outils ergonomique (`.filter-toolbar`) avec un champ de recherche et deux menus déroulants de sélection, et itérer sur `filteredTracks()` dans la boucle `@for`.
+  5. Styliser les filtres dans [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css) pour une interface moderne, intuitive et responsive.
+
+- **Vérifications réalisées par le binôme** :  
+  - Saisie d'une chaîne dans la barre de recherche : filtrage immédiat et fluide des cartes sans rechargement de page.
+  - Changement de tri (ex: « Taille (décroissante) ») : réorganisation instantanée des pistes affichées de la plus lourde à la plus légère.
+  - Sélection d'une tranche de taille (ex: « < 1 Mo ») : seules les pistes dont le poids est inférieur à 1 Mo restent affichées.
+  - Clic sur « Effacer » : remise à zéro des filtres et retour à l'affichage initial trié par date récente.
+  - Cas d'aucun résultat trouvé : affichage du message explicite *« Aucun morceau ne correspond à vos filtres actuels. »*.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'un filtrage impératif avec des variables mutables et des souscriptions manuelles : `computed()` garantit une dérivation pure, automatique et sans effet de bord des signaux d'entrée.
+  - Rejet de la modification directe du tableau `tracks()` : filtrer le signal source aurait détruit les pistes d'origine en mémoire, forçant un appel réseau à chaque réinitialisation.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Recherche instantanée, tri et filtrage réactifs opérationnels sur `http://localhost:4200/tracks`.
+  - Bouton « Effacer » apparaissant uniquement quand un filtre est actif.
+  - Compilation sans erreur validée par `npm run build`.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Comment utiliser la primitive `computed()` pour créer un état dérivé réactif en lecture seule synchronisé avec plusieurs Signals.
+  - Pourquoi le calcul dérivé via `computed()` optimise les performances (mémoïsation et recalcul uniquement si l'un des signaux dépendants émet une nouvelle valeur).
+  - Comment implémenter un tri multi-critères avec `localeCompare` pour les chaînes et comparaison numérique pour les tailles et timestamps.
+  ![alt text](image-26.png)
+  ![alt text](image-27.png)

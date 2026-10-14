@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
-import { Component, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Track } from '../../shared/models/track.model';
@@ -33,11 +33,89 @@ export class TracksPageComponent implements OnDestroy {
   readonly audioUrl = signal('');
   readonly title = new FormControl('', { nonNullable: true });
 
+  // Signaux de filtrage et tri
+  readonly searchFilter = signal('');
+  readonly sortBy = signal<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'size-asc' | 'size-desc'>('date-desc');
+  readonly sizeFilter = signal<'all' | 'small' | 'medium' | 'large'>('all');
+
+  readonly hasActiveFilters = computed(() => {
+    return this.searchFilter().trim().length > 0 || this.sortBy() !== 'date-desc' || this.sizeFilter() !== 'all';
+  });
+
+  readonly filteredTracks = computed(() => {
+    const query = this.searchFilter().trim().toLowerCase();
+    const sort = this.sortBy();
+    const size = this.sizeFilter();
+
+    let result = [...this.tracks()];
+
+    // 1. Filtrage textuel (titre et nom original du fichier)
+    if (query) {
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query) ||
+          t.originalName.toLowerCase().includes(query)
+      );
+    }
+
+    // 2. Filtrage par tranche de taille
+    if (size === 'small') {
+      result = result.filter((t) => t.size < 1024 * 1024);
+    } else if (size === 'medium') {
+      result = result.filter((t) => t.size >= 1024 * 1024 && t.size <= 5 * 1024 * 1024);
+    } else if (size === 'large') {
+      result = result.filter((t) => t.size > 5 * 1024 * 1024);
+    }
+
+    // 3. Tri
+    result.sort((a, b) => {
+      switch (sort) {
+        case 'title-asc':
+          return a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' });
+        case 'title-desc':
+          return b.title.localeCompare(a.title, 'fr', { sensitivity: 'base' });
+        case 'size-asc':
+          return a.size - b.size;
+        case 'size-desc':
+          return b.size - a.size;
+        case 'date-asc':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'date-desc':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+    return result;
+  });
+
   file?: File;
 
   constructor() {
     this.load();
   }
+
+  setSearch(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.searchFilter.set(input.value);
+  }
+
+  setSort(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.sortBy.set(select.value as any);
+  }
+
+  setSizeFilter(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.sizeFilter.set(select.value as any);
+  }
+
+  resetFilters(): void {
+    this.searchFilter.set('');
+    this.sortBy.set('date-desc');
+    this.sizeFilter.set('all');
+  }
+
 
   choose(event: Event): void {
     this.file = (event.target as HTMLInputElement).files?.[0];
