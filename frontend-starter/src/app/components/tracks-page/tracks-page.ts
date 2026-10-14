@@ -144,6 +144,9 @@ export class TracksPageComponent implements OnDestroy {
     console.debug('[TracksPage] Image de couverture sélectionnée', this.coverFile?.name);
   }
 
+  readonly coverMessage = signal<string | null>(null);
+  readonly coverError = signal<string | null>(null);
+  readonly updatingCoverTrackId = signal<string | null>(null);
   readonly coverVersion = signal<Record<string, number>>({});
 
   getTrackCoverUrl(track: Track): string {
@@ -160,16 +163,38 @@ export class TracksPageComponent implements OnDestroy {
     const file = input.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      this.coverError.set('Veuillez sélectionner un fichier image valide (PNG, JPEG, WebP).');
+      input.value = '';
+      return;
+    }
+
+    this.coverMessage.set(null);
+    this.coverError.set(null);
+    this.updatingCoverTrackId.set(track.id);
+
     this.service.updateCover(track.id, file).subscribe({
       next: (updatedTrack) => {
+        // Mise à jour immédiate et réactive du signal de la liste
         this.tracks.update((list) =>
           list.map((t) => (t.id === track.id ? { ...t, hasCover: true } : t))
         );
+        // Force le rechargement immédiat de l'image par cache-busting
         this.coverVersion.update((v) => ({ ...v, [track.id]: Date.now() }));
+
+        // Synchroniser le lecteur si ce morceau est actuellement en lecture
+        if (this.currentTrack()?.id === track.id) {
+          this.currentTrack.update((current) => (current ? { ...current, hasCover: true } : null));
+        }
+
+        this.coverMessage.set(`L'image de couverture du morceau « ${track.title} » a été mise à jour.`);
+        this.updatingCoverTrackId.set(null);
         input.value = '';
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         console.error('[TracksPage] Erreur de mise à jour de pochette', err);
+        this.coverError.set(err.error?.message ?? 'Impossible de mettre à jour l\'image de couverture.');
+        this.updatingCoverTrackId.set(null);
         input.value = '';
       },
     });
@@ -178,16 +203,36 @@ export class TracksPageComponent implements OnDestroy {
   removeCoverForTrack(track: Track, event?: Event): void {
     event?.stopPropagation();
     if (!track.hasCover) return;
-    if (!window.confirm(`Supprimer la pochette personnalisée du morceau « ${track.title} » ?`)) return;
+    if (!window.confirm(`Supprimer l'image de couverture personnalisée du morceau « ${track.title} » ? L'image par défaut sera rétablie.`)) {
+      return;
+    }
+
+    this.coverMessage.set(null);
+    this.coverError.set(null);
+    this.updatingCoverTrackId.set(track.id);
 
     this.service.deleteCover(track.id).subscribe({
       next: () => {
+        // Rétablir immédiatement l'indicateur hasCover: false
         this.tracks.update((list) =>
           list.map((t) => (t.id === track.id ? { ...t, hasCover: false } : t))
         );
+        // Mettre à jour la version pour forcer l'affichage du default-cover.svg
         this.coverVersion.update((v) => ({ ...v, [track.id]: Date.now() }));
+
+        // Synchroniser le lecteur si ce morceau est actuellement en lecture
+        if (this.currentTrack()?.id === track.id) {
+          this.currentTrack.update((current) => (current ? { ...current, hasCover: false } : null));
+        }
+
+        this.coverMessage.set(`L'image personnalisée de « ${track.title} » a été supprimée (image par défaut rétablie).`);
+        this.updatingCoverTrackId.set(null);
       },
-      error: (err) => console.error('[TracksPage] Erreur de suppression de pochette', err),
+      error: (err: HttpErrorResponse) => {
+        console.error('[TracksPage] Erreur de suppression de pochette', err);
+        this.coverError.set(err.error?.message ?? 'Impossible de supprimer l\'image de couverture.');
+        this.updatingCoverTrackId.set(null);
+      },
     });
   }
 

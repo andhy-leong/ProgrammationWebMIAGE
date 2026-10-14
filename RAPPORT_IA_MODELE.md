@@ -966,3 +966,57 @@ Je change manuellement le gpc_token
   - Comment garantir le nettoyage rigoureux des fichiers physiques orphelins (audio et image) lors de la suppression d'une ressource ou lors d'une erreur d'insertion en base de données.
   ![alt text](image-28.png)
   ![alt text](image-29.png)
+
+### 13. Ajout, modification et suppression réactives de l'image de couverture d'un morceau déjà importé avec actualisation instantanée
+
+- **Objectif** :  
+  Permettre à l'utilisateur d'ajouter une image de couverture personnalisée à un morceau déjà importé, de la remplacer ou de la supprimer pour revenir à l'image par défaut, avec une interface claire et accessible sur chaque carte (boutons d'action visibles et champ fichier masqué déclenché au clic), une confirmation utilisateur pour la suppression, des messages de retour réactifs (Signaux `coverMessage`, `coverError`) et une actualisation automatique instantanée de l'affichage (mise à jour réactive du Signal `tracks`, cache-busting `&v=Date.now()` sur l'URL d'image et synchronisation du lecteur audio actif).
+
+- **Prompt principal** :  
+  > *« je veux pouvoir ajouter une image personnalisé à une chanson déjà importé et pouvoir supprimé l'image d'une chanson déjà importé en actualisant automatiquement pour que l'utilisateur le voit directement »*
+
+- **Plan proposé par l'agent** :  
+  1. Côté Backend ([`backend/src/app.js`](backend/src/app.js)) :
+     - Vérifier et exploiter l'endpoint `PUT /api/tracks/:id/cover` protégé avec `upload.single("cover")`, qui supprime l'ancien fichier image sur disque, enregistre le nouveau et met à jour `hasCover: true`.
+     - Vérifier et exploiter l'endpoint `DELETE /api/tracks/:id/cover` protégé, qui supprime le fichier image sur disque et réinitialise `hasCover: false`.
+  2. Côté Frontend Service ([`track.service.ts`](frontend-starter/src/app/shared/services/track.service.ts)) :
+     - Méthodes `updateCover(id, file)` (`PUT`) et `deleteCover(id)` (`DELETE`).
+  3. Côté Frontend Composant ([`tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)) :
+     - Ajouter les Signals réactifs : `coverMessage`, `coverError`, `updatingCoverTrackId` et `coverVersion`.
+     - Dans `onCoverChangeForTrack(event, track)` : valider le type de fichier, appeler `updateCover`, mettre à jour immédiatement `tracks()` avec `hasCover: true`, forcer le rechargement par cache-busting avec `coverVersion`, synchroniser `currentTrack()` si le morceau est en cours de lecture et afficher un message de succès.
+     - Dans `removeCoverForTrack(track, event)` : demander confirmation, appeler `deleteCover`, mettre à jour immédiatement `tracks()` avec `hasCover: false`, mettre à jour `coverVersion`, synchroniser `currentTrack()` et afficher la notification.
+  4. Côté Template & Styles ([`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html), [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)) :
+     - Remplacer l'overlay peu visible au survol par une ergonomie directe : boutons dédiés `.btn-cover-action` (« 🖼️ Ajouter image » / « 🖼️ Modifier ») et `.btn-remove-cover` (« ✕ Retirer image ») sur chaque carte.
+     - Associer un `<input #coverFileInput type="file" style="display:none">` activable au clic sur le bouton ou sur la vignette de pochette.
+     - Afficher les bannières d'alerte réactives `@if (coverMessage())` et `@if (coverError())`.
+
+- **Vérifications réalisées par le binôme** :  
+  - Ajout d'une image sur un morceau sans couverture : clic sur « 🖼️ Ajouter image » → sélection du fichier → upload immédiat → le bouton passe à « 🖼️ Modifier » et l'image s'affiche instantanément à la place du SVG par défaut.
+  - Modification d'une image existante : sélection d'une nouvelle photo → remplacement immédiat sur la carte grâce au cache-busting `&v=...` sans rechargement de page.
+  - Suppression d'une image personnalisée : clic sur « ✕ Retirer image » → boîte de confirmation native → suppression backend → retour immédiat à l'image par défaut SVG (`default-cover.svg`) et masquage du bouton de suppression.
+  - Synchronisation du lecteur audio : si le morceau modifié est en cours de lecture en bas de l'écran, sa vignette se met à jour instantanément.
+  - Compilation Angular validée sans erreur avec `npm run build` et tests backend validés avec `npm test`.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'un rechargement complet de la liste via `load()` après modification/suppression de couverture : cela aurait provoqué un clignotement de l'interface et réinitialisé la position de défilement ; la mise à jour granulaire des signaux `tracks` et `coverVersion` garantit une fluidité maximale.
+  - Rejet d'un bouton caché uniquement accessible au survol CSS (`:hover`) : inadapté aux écrans tactiles et peu intuitif pour les utilisateurs. Les boutons explicites rendent l'action évidente et accessible.
+  - Rejet de l'omission du cache-busting : les navigateurs mettant agressivement les images en cache HTTP, l'URL sans timestamp aurait continué d'afficher l'ancienne image malgré la modification serveur.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+  - [`frontend-starter/src/app/shared/services/track.service.ts`](frontend-starter/src/app/shared/services/track.service.ts)
+  - [`backend/src/app.js`](backend/src/app.js)
+
+- **Preuve de fonctionnement** :  
+  - Requêtes HTTP `PUT /api/tracks/:id/cover` et `DELETE /api/tracks/:id/cover` retournant un statut 200.
+  - Rafraîchissement visuel instantané de l'image de couverture et du lecteur sans rechargement de page.
+  - Notification verte de confirmation affichée après chaque opération.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Pourquoi le cache HTTP du navigateur nécessite un mécanisme de cache-busting (paramètre d'URL dynamique `&v=${timestamp}`) pour refléter immédiatement une ressource d'image modifiée sous une même URL d'API.
+  - Comment synchroniser de façon granulaire et réactive un tableau de données dans un Signal Angular (`this.tracks.update(list => list.map(...))`) sans devoir recharger toute la liste via une requête HTTP superflue.
+  - Comment déclencher un sélecteur de fichier HTML de manière accessible et ergonomique sans afficher l'élément natif `input[type="file"]`.
+  ![alt text](image-30.png)
+  ![alt text](image-31.png)

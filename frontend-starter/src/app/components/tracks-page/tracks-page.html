@@ -60,6 +60,12 @@
       @if (deleteError()) {
         <div class="alert alert-error">{{ deleteError() }}</div>
       }
+      @if (coverMessage()) {
+        <div class="alert alert-success">{{ coverMessage() }}</div>
+      }
+      @if (coverError()) {
+        <div class="alert alert-error">{{ coverError() }}</div>
+      }
       <!-- Barre d'outils : Filtrage et Tri -->
       <div class="filter-toolbar">
         <div class="search-field">
@@ -102,23 +108,29 @@
 
       @for (track of filteredTracks(); track track.id) {
         <div class="track">
+          <!-- Input fichier caché pour changer/ajouter la pochette de cette piste -->
+          <input
+            #coverFileInput
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="onCoverChangeForTrack($event, track)"
+            style="display: none"
+          />
+
           <div class="track-main">
-            <div class="track-cover-wrapper" title="Cliquer pour changer la pochette d'album">
+            <div
+              class="track-cover-wrapper"
+              (click)="coverFileInput.click()"
+              [title]="track.hasCover ? 'Cliquer pour remplacer la pochette' : 'Cliquer pour ajouter une pochette'">
               <img
                 [src]="getTrackCoverUrl(track)"
                 [alt]="'Pochette de ' + track.title"
                 class="track-cover"
                 loading="lazy"
               />
-              <label class="cover-change-overlay" [attr.aria-label]="'Changer la pochette de ' + track.title">
+              <span class="cover-change-overlay" aria-hidden="true">
                 📷
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  (change)="onCoverChangeForTrack($event, track)"
-                  hidden
-                />
-              </label>
+              </span>
             </div>
             <div class="track-details">
               <b>{{ track.title }}</b>
@@ -126,14 +138,23 @@
             </div>
           </div>
           <div class="track-actions">
+            <button
+              type="button"
+              class="btn-cover-action"
+              (click)="coverFileInput.click()"
+              [disabled]="updatingCoverTrackId() === track.id || deletingTrackId() === track.id"
+              [title]="track.hasCover ? 'Modifier l’image personnalisée' : 'Ajouter une image personnalisée'">
+              {{ updatingCoverTrackId() === track.id ? '⏳' : (track.hasCover ? '🖼️ Modifier' : '🖼️ Ajouter image') }}
+            </button>
             @if (track.hasCover) {
               <button
                 type="button"
                 class="btn-remove-cover"
                 (click)="removeCoverForTrack(track, $event)"
-                [attr.aria-label]="'Supprimer la pochette de ' + track.title"
-                title="Supprimer la pochette et revenir au défaut">
-                🖼️✕
+                [disabled]="updatingCoverTrackId() === track.id || deletingTrackId() === track.id"
+                [attr.aria-label]="'Supprimer l’image de ' + track.title"
+                title="Supprimer la pochette personnalisée et rétablir l’image par défaut">
+                ✕ Retirer image
               </button>
             }
             <button

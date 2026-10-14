@@ -173,25 +173,55 @@
   margin: 0 !important;
 }
 
+.track-cover-wrapper {
+  cursor: pointer;
+}
+
 .track-cover-wrapper:hover .cover-change-overlay {
   opacity: 1;
 }
 
-.btn-remove-cover {
-  padding: 0.45rem 0.6rem;
+.btn-cover-action {
+  padding: 0.45rem 0.65rem;
   font-size: 0.82rem;
-  background: #f1f3f4;
-  color: #5f6368;
-  border: 1px solid #dadce0;
+  background: #eef7f4;
+  color: #1d755e;
+  border: 1px solid #bfe3d7;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 500;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.btn-remove-cover:hover {
-  background: #fce8e6;
-  border-color: #f5c2c7;
+.btn-cover-action:hover:not(:disabled) {
+  background: #d8eee7;
+  border-color: #1d755e;
+}
+
+.btn-remove-cover {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  background: #fff0f0;
   color: #c5221f;
+  border: 1px solid #f5c2c7;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-remove-cover:hover:not(:disabled) {
+  background: #fce8e6;
+  border-color: #ea868f;
+  color: #a51d24;
+}
+
+.btn-cover-action:disabled,
+.btn-remove-cover:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 
