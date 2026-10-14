@@ -10,7 +10,19 @@
       <h2>Importer</h2>
       <label>Titre<input [formControl]="title" [disabled]="uploading()" /></label>
       <label>Fichier audio<input #fileInput type="file" accept="audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
-      <button type="button" (click)="upload(fileInput)" [disabled]="!file || uploading()">
+      <label>
+        Image de couverture (optionnelle)
+        <input #coverInput type="file" accept="image/png,image/jpeg,image/webp" (change)="chooseCover($event)" [disabled]="uploading()" />
+      </label>
+
+      @if (coverPreviewUrl()) {
+        <div class="cover-preview-box">
+          <small>Aperçu de la pochette :</small>
+          <img [src]="coverPreviewUrl()" alt="Aperçu de la pochette sélectionnée" class="cover-preview-thumb" />
+        </div>
+      }
+
+      <button type="button" (click)="upload(fileInput, coverInput)" [disabled]="!file || uploading()">
         {{ uploading() ? 'Envoi en cours…' : 'Envoyer' }}
       </button>
 
@@ -90,9 +102,17 @@
 
       @for (track of filteredTracks(); track track.id) {
         <div class="track">
-          <div class="track-details">
-            <b>{{ track.title }}</b>
-            <small>{{ track.originalName }} · {{ track.size | fileSize }} · Ajouté le {{ track.createdAt | date:'dd/MM/yyyy HH:mm' }}</small>
+          <div class="track-main">
+            <img
+              [src]="getTrackCoverUrl(track)"
+              [alt]="'Pochette de ' + track.title"
+              class="track-cover"
+              loading="lazy"
+            />
+            <div class="track-details">
+              <b>{{ track.title }}</b>
+              <small>{{ track.originalName }} · {{ track.size | fileSize }} · Ajouté le {{ track.createdAt | date:'dd/MM/yyyy HH:mm' }}</small>
+            </div>
           </div>
           <div class="track-actions">
             <button
@@ -129,12 +149,20 @@
         (page)="onPageChange($event)"
         aria-label="Pagination des pistes">
       </mat-paginator>
-      @if (audioUrl()) {
+      @if (audioUrl() && currentTrack()) {
         <div class="now-playing">
-          <small>En cours de lecture : <strong>{{ currentTrack()?.title }}</strong></small>
-          <audio [src]="audioUrl()" controls autoplay></audio>
+          <img
+            [src]="getTrackCoverUrl(currentTrack()!)"
+            [alt]="'Pochette de ' + currentTrack()?.title"
+            class="now-playing-cover"
+          />
+          <div class="now-playing-info">
+            <small>En cours de lecture : <strong>{{ currentTrack()?.title }}</strong></small>
+            <audio [src]="audioUrl()" controls autoplay></audio>
+          </div>
         </div>
       }
     </article>
   </div>
 </section>
+

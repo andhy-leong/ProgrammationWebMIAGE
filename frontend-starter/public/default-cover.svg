@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#123d32"/>
+      <stop offset="50%" stop-color="#1d755e"/>
+      <stop offset="100%" stop-color="#0e2a22"/>
+    </linearGradient>
+    <radialGradient id="vinyl" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2d3748" stop-opacity="0.3"/>
+      <stop offset="40%" stop-color="#1a202c" stop-opacity="0.6"/>
+      <stop offset="70%" stop-color="#2d3748" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#1a202c" stop-opacity="0.8"/>
+    </radialGradient>
+  </defs>
+  <!-- Fond moderne dégradé -->
+  <rect width="200" height="200" rx="16" fill="url(#bg)"/>
+  <!-- Cercle de disque vinyle -->
+  <circle cx="100" cy="100" r="75" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+  <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <circle cx="100" cy="100" r="45" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+  <!-- Centre du disque -->
+  <circle cx="100" cy="100" r="28" fill="#17312a" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <!-- Note de musique / Icône onde sonore -->
+  <path d="M93 88v24.5a7 7 0 1 1-5-6.7V93l16-4v19.5a7 7 0 1 1-5-6.7V85l-6 1.5z" fill="#48bb78"/>
+  <circle cx="100" cy="100" r="4" fill="#ffffff"/>
+</svg>

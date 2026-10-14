@@ -5,6 +5,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Track } from '../../shared/models/track.model';
 import { FileSizePipe } from '../../shared/pipes/file-size.pipe';
+import { AuthService } from '../../shared/services/auth.service';
 import { TrackService } from '../../shared/services/track.service';
 
 @Component({
@@ -14,6 +15,7 @@ import { TrackService } from '../../shared/services/track.service';
 })
 export class TracksPageComponent implements OnDestroy {
   private readonly service = inject(TrackService);
+  private readonly auth = inject(AuthService);
 
   readonly tracks = signal<Track[]>([]);
   readonly page = signal(1);
@@ -32,6 +34,10 @@ export class TracksPageComponent implements OnDestroy {
   readonly currentTrack = signal<Track | null>(null);
   readonly audioUrl = signal('');
   readonly title = new FormControl('', { nonNullable: true });
+
+  coverFile?: File;
+  readonly coverPreviewUrl = signal<string | null>(null);
+
 
   // Signaux de filtrage et tri
   readonly searchFilter = signal('');
@@ -125,6 +131,26 @@ export class TracksPageComponent implements OnDestroy {
     console.debug('[TracksPage] Fichier sélectionné', this.file?.name);
   }
 
+  chooseCover(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.coverFile = input.files?.[0];
+    const oldUrl = this.coverPreviewUrl();
+    if (oldUrl) URL.revokeObjectURL(oldUrl);
+    if (this.coverFile) {
+      this.coverPreviewUrl.set(URL.createObjectURL(this.coverFile));
+    } else {
+      this.coverPreviewUrl.set(null);
+    }
+    console.debug('[TracksPage] Image de couverture sélectionnée', this.coverFile?.name);
+  }
+
+  getTrackCoverUrl(track: Track): string {
+    if (track.hasCover) {
+      return this.service.coverUrl(track.id, this.auth.token());
+    }
+    return '/default-cover.svg';
+  }
+
   load(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -162,7 +188,7 @@ export class TracksPageComponent implements OnDestroy {
     this.load();
   }
 
-  upload(fileInput?: HTMLInputElement): void {
+  upload(fileInput?: HTMLInputElement, coverInput?: HTMLInputElement): void {
     if (!this.file || this.uploading()) return;
 
     this.uploading.set(true);
@@ -173,7 +199,7 @@ export class TracksPageComponent implements OnDestroy {
     const uploadedFileName = this.file.name;
     const trackTitle = this.title.value || uploadedFileName;
 
-    this.service.upload(this.file, trackTitle).subscribe({
+    this.service.upload(this.file, trackTitle, this.coverFile).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           const progress = Math.round((100 * event.loaded) / event.total);
@@ -186,7 +212,12 @@ export class TracksPageComponent implements OnDestroy {
           this.uploadSuccess.set(`Piste « ${track?.title ?? trackTitle} » importée avec succès.`);
           this.title.setValue('');
           this.file = undefined;
+          this.coverFile = undefined;
+          const oldPreview = this.coverPreviewUrl();
+          if (oldPreview) URL.revokeObjectURL(oldPreview);
+          this.coverPreviewUrl.set(null);
           if (fileInput) fileInput.value = '';
+          if (coverInput) coverInput.value = '';
           this.page.set(1);
           this.load();
         }
@@ -264,6 +295,12 @@ export class TracksPageComponent implements OnDestroy {
       URL.revokeObjectURL(url);
       this.audioUrl.set('');
     }
+    const coverUrl = this.coverPreviewUrl();
+    if (coverUrl) {
+      URL.revokeObjectURL(coverUrl);
+      this.coverPreviewUrl.set(null);
+    }
   }
 }
+
 

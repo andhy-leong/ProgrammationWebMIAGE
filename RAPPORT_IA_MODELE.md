@@ -901,6 +901,67 @@ Je change manuellement le gpc_token
 - **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
   - Comment utiliser la primitive `computed()` pour créer un état dérivé réactif en lecture seule synchronisé avec plusieurs Signals.
   - Pourquoi le calcul dérivé via `computed()` optimise les performances (mémoïsation et recalcul uniquement si l'un des signaux dépendants émet une nouvelle valeur).
-  - Comment implémenter un tri multi-critères avec `localeCompare` pour les chaînes et comparaison numérique pour les tailles et timestamps.
   ![alt text](image-26.png)
   ![alt text](image-27.png)
+
+---
+
+### 12. Image de couverture des morceaux : identification des impacts API/données, téléversement et fallback SVG
+
+- **Objectif** :  
+  Permettre l'association d'une image de couverture à chaque morceau selon les exigences de la section *AVANCÉ* du TP2 : identification préalable des impacts sur le modèle de données et l'API Express, téléversement multipart simultané de l'audio et de l'image optionnelle (`upload.fields`), stockage sécurisé sur disque avec validation stricte des types MIME (`image/jpeg`, `image/png`, `image/webp`), endpoint dédié de diffusion (`GET /api/tracks/:id/cover`), nettoyage physique en cas de suppression (`DELETE /api/tracks/:id`) ou d'erreur, et affichage responsive sur les cartes et le lecteur audio avec image par défaut vectorielle SVG en fallback.
+
+- **Prompt principal** :  
+  > *« j'aimerais pouvoir ajouter une image de couverture pour chaque morceau. Je veux mettre permettre à l'utilisateur d'uploader une image associée au morceau ou sinon mettre une image par défaut »*
+
+- **Plan proposé par l'agent** :  
+  1. **Modèle de données backend** ([`Track.js`](backend/src/models/Track.js)) : ajouter `coverStoredName` (nom technique UUID masqué par défaut) et `hasCover` (booléen public retourné par `toPublic()`).
+  2. **API Express & Multer** ([`app.js`](backend/src/app.js)) :
+     - Déclarer `allowedImages` (JPEG, PNG, WebP) et adapter `fileFilter` pour valider spécifiquement chaque champ (`audio` vs `cover`).
+     - Remplacer `upload.single("audio")` par `upload.fields([{ name: "audio", maxCount: 1 }, { name: "cover", maxCount: 1 }])`.
+     - Permettre au middleware `auth` d'authentifier les requêtes via l'en-tête `Authorization: Bearer <token>` ou le paramètre d'URL `?token=` (indispensable pour les balises HTML `<img>`).
+     - Créer l'endpoint `GET /api/tracks/:id/cover` avec `res.sendFile()`.
+     - Mettre à jour `DELETE /api/tracks/:id` pour supprimer également le fichier de couverture du disque (`fsPromises.unlink`).
+  3. **Frontend Service & Modèle** :
+     - Étendre l'interface [`Track`](frontend-starter/src/app/shared/models/track.model.ts) avec `hasCover?: boolean`.
+     - Adapter [`TrackService.upload()`](frontend-starter/src/app/shared/services/track.service.ts) pour intégrer optionnellement `cover` dans le `FormData`.
+     - Ajouter [`TrackService.coverUrl(id, token)`](frontend-starter/src/app/shared/services/track.service.ts).
+  4. **Frontend Composant & Template** ([`tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts), [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html), [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)) :
+     - Créer un SVG vectoriel moderne [`default-cover.svg`](frontend-starter/public/default-cover.svg) dans le dossier public en image de repli.
+     - Ajouter le champ d'upload d'image avec prévisualisation réactive instantanée (`coverPreviewUrl`).
+     - Afficher la pochette sur chaque carte (`.track-cover`) et dans la barre de lecture active (`.now-playing-cover`).
+     - Révoquer les URLs Blob de prévisualisation dans `ngOnDestroy()`.
+
+- **Vérifications réalisées par le binôme** :  
+  - Upload d'un morceau avec image sélectionnée : la prévisualisation miniature apparaît immédiatement dans le formulaire.
+  - Inspection réseau de l'upload : payload `multipart/form-data` contenant à la fois `audio`, `title` et le fichier image binaire sous le champ `cover`.
+  - Vérification MongoDB & Disque : `hasCover: true` et le fichier image stocké avec nom UUID dans `data/uploads/`.
+  - Affichage dans la bibliothèque : la carte présente la vraie image de couverture, tandis qu'un morceau téléversé sans image affiche automatiquement le vinyle SVG `default-cover.svg`.
+  - Lecteur audio : au clic sur ▶, la pochette correspondante s'affiche aux côtés des contrôles audio.
+  - Suppression : le clic sur la corbeille supprime à la fois le morceau audio et son fichier image sur le serveur.
+  - Exécution des tests unitaires backend (`npm test`) : 3/3 tests passés avec succès sans régression.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'enregistrement de l'image en base64 directement dans le document MongoDB : cela alourdirait considérablement les requêtes de liste `GET /api/tracks` et consommerait inutilement de la RAM ; le stockage fichier avec UUID et streaming disque (`res.sendFile`) est nettement plus performant et scalable.
+  - Rejet de l'utilisation d'une simple URL externe non vérifiée : l'upload direct garantit la pérennité des médias et évite les liens brisés ou les problèmes de CORS.
+
+- **Fichiers effectivement modifiés** :  
+  - [`backend/src/models/Track.js`](backend/src/models/Track.js)
+  - [`backend/src/app.js`](backend/src/app.js)
+  - [`frontend-starter/public/default-cover.svg`](frontend-starter/public/default-cover.svg)
+  - [`frontend-starter/src/app/shared/models/track.model.ts`](frontend-starter/src/app/shared/models/track.model.ts)
+  - [`frontend-starter/src/app/shared/services/track.service.ts`](frontend-starter/src/app/shared/services/track.service.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Test `npm test` backend validé à 100 %.
+  - Compilation Angular `npm run build` exécutée avec 0 erreur.
+  - Affichage fluide des pochettes personnalisées et du fallback SVG sur `http://localhost:4200/tracks`.
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Comment configurer Multer avec `upload.fields()` pour gérer simultanément plusieurs fichiers hétérogènes (`audio` et `cover`) avec validation distincte de leurs types MIME.
+  - Pourquoi les balises HTML `<img>` natives ne peuvent pas transmettre les en-têtes HTTP personnalisés (`Authorization: Bearer`), et comment autoriser le jeton JWT par query parameter (`?token=`) ou via un `Blob` Angular.
+  - Comment garantir le nettoyage rigoureux des fichiers physiques orphelins (audio et image) lors de la suppression d'une ressource ou lors d'une erreur d'insertion en base de données.
+  ![alt text](image-28.png)

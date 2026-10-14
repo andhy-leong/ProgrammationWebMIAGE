@@ -18,6 +18,8 @@ const schema = new mongoose.Schema(
     storedName: { type: String, required: true, select: false },
     mimeType: { type: String, required: true },
     size: { type: Number, required: true, min: 0 },
+    coverStoredName: { type: String, select: false },
+    hasCover: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
@@ -38,8 +40,10 @@ schema.methods.toPublic = function () {
     originalName: this.originalName,
     mimeType: this.mimeType,
     size: this.size,
+    hasCover: Boolean(this.hasCover || this.coverStoredName),
     createdAt: this.createdAt,
   };
 };
 
 export const Track = mongoose.model("Track", schema);
+
