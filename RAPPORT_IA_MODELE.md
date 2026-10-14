@@ -708,5 +708,8 @@ Je change manuellement le gpc_token
 - --> Non, car la méthode `load()` appelle uniquement `TrackService.list()` qui ne récupère que les métadonnées JSON de la page active, le binaire audio n'étant chargé en mémoire via `TrackService.audio(track.id)` que lors d'un clic explicite sur la méthode `play(track)`
 - Quelle différence y aurait-il avec 100 éléments `<audio>` utilisant directement une URL HTTP ?
 - --> Le navigateur tenterait d'ouvrir de multiples connexions simultanées pour précharger et buffériser progressivement chaque flux audio, mais ces requêtes échoueraient surtout avec une erreur `401 Unauthorized` car une balise `<audio>` native ne peut pas transmettre le header JWT `Authorization`
+- Pourquoi l'URL créée par `URL.createObjectURL` doit-elle être révoquée ?
+- --> L'URL doit être révoquée via `URL.revokeObjectURL()` pour rompre la référence interne conservée par le navigateur et permettre au Garbage Collector de libérer la mémoire vive allouée au `Blob`, évitant ainsi les fuites de mémoire
+
 
 
