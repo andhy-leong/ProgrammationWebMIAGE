@@ -144,12 +144,53 @@ export class TracksPageComponent implements OnDestroy {
     console.debug('[TracksPage] Image de couverture sélectionnée', this.coverFile?.name);
   }
 
+  readonly coverVersion = signal<Record<string, number>>({});
+
   getTrackCoverUrl(track: Track): string {
     if (track.hasCover) {
-      return this.service.coverUrl(track.id, this.auth.token());
+      const v = this.coverVersion()[track.id] || 0;
+      const baseUrl = this.service.coverUrl(track.id, this.auth.token());
+      return v > 0 ? `${baseUrl}&v=${v}` : baseUrl;
     }
     return '/default-cover.svg';
   }
+
+  onCoverChangeForTrack(event: Event, track: Track): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.service.updateCover(track.id, file).subscribe({
+      next: (updatedTrack) => {
+        this.tracks.update((list) =>
+          list.map((t) => (t.id === track.id ? { ...t, hasCover: true } : t))
+        );
+        this.coverVersion.update((v) => ({ ...v, [track.id]: Date.now() }));
+        input.value = '';
+      },
+      error: (err) => {
+        console.error('[TracksPage] Erreur de mise à jour de pochette', err);
+        input.value = '';
+      },
+    });
+  }
+
+  removeCoverForTrack(track: Track, event?: Event): void {
+    event?.stopPropagation();
+    if (!track.hasCover) return;
+    if (!window.confirm(`Supprimer la pochette personnalisée du morceau « ${track.title} » ?`)) return;
+
+    this.service.deleteCover(track.id).subscribe({
+      next: () => {
+        this.tracks.update((list) =>
+          list.map((t) => (t.id === track.id ? { ...t, hasCover: false } : t))
+        );
+        this.coverVersion.update((v) => ({ ...v, [track.id]: Date.now() }));
+      },
+      error: (err) => console.error('[TracksPage] Erreur de suppression de pochette', err),
+    });
+  }
+
 
   load(): void {
     this.loading.set(true);

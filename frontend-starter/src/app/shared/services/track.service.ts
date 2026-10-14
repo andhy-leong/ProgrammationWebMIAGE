@@ -44,9 +44,20 @@ export class TrackService {
     return token ? `/api/tracks/${id}/cover?token=${encodeURIComponent(token)}` : `/api/tracks/${id}/cover`;
   }
 
+  updateCover(id: string, file: File): Observable<Track> {
+    const body = new FormData();
+    body.append('cover', file);
+    return this.http.put<Track>(`/api/tracks/${id}/cover`, body);
+  }
+
+  deleteCover(id: string): Observable<Track> {
+    return this.http.delete<Track>(`/api/tracks/${id}/cover`);
+  }
+
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`/api/tracks/${id}`);
   }
 }
+
 
 

@@ -103,18 +103,39 @@
       @for (track of filteredTracks(); track track.id) {
         <div class="track">
           <div class="track-main">
-            <img
-              [src]="getTrackCoverUrl(track)"
-              [alt]="'Pochette de ' + track.title"
-              class="track-cover"
-              loading="lazy"
-            />
+            <div class="track-cover-wrapper" title="Cliquer pour changer la pochette d'album">
+              <img
+                [src]="getTrackCoverUrl(track)"
+                [alt]="'Pochette de ' + track.title"
+                class="track-cover"
+                loading="lazy"
+              />
+              <label class="cover-change-overlay" [attr.aria-label]="'Changer la pochette de ' + track.title">
+                📷
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  (change)="onCoverChangeForTrack($event, track)"
+                  hidden
+                />
+              </label>
+            </div>
             <div class="track-details">
               <b>{{ track.title }}</b>
               <small>{{ track.originalName }} · {{ track.size | fileSize }} · Ajouté le {{ track.createdAt | date:'dd/MM/yyyy HH:mm' }}</small>
             </div>
           </div>
           <div class="track-actions">
+            @if (track.hasCover) {
+              <button
+                type="button"
+                class="btn-remove-cover"
+                (click)="removeCoverForTrack(track, $event)"
+                [attr.aria-label]="'Supprimer la pochette de ' + track.title"
+                title="Supprimer la pochette et revenir au défaut">
+                🖼️✕
+              </button>
+            }
             <button
               type="button"
               class="btn-play"

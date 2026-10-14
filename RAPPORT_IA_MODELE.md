@@ -965,3 +965,4 @@ Je change manuellement le gpc_token
   - Pourquoi les balises HTML `<img>` natives ne peuvent pas transmettre les en-têtes HTTP personnalisés (`Authorization: Bearer`), et comment autoriser le jeton JWT par query parameter (`?token=`) ou via un `Blob` Angular.
   - Comment garantir le nettoyage rigoureux des fichiers physiques orphelins (audio et image) lors de la suppression d'une ressource ou lors d'une erreur d'insertion en base de données.
   ![alt text](image-28.png)
+  ![alt text](image-29.png)

@@ -543,6 +543,80 @@ export function createApp() {
     }
   });
 
+  /** Met à jour ou ajoute une image de couverture à un morceau existant. */
+  app.put(
+    "/api/tracks/:id/cover",
+    auth,
+    upload.single("cover"),
+    async (req, res, next) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "Fichier image de couverture requis" });
+        }
+
+        const track = await Track.findOne({
+          _id: req.params.id,
+          ownerId: req.auth.sub,
+        }).select("+coverStoredName");
+
+        if (!track) {
+          const uploadedPath = path.join(UPLOADS, req.file.filename);
+          await fsPromises.unlink(uploadedPath).catch(() => {});
+          return res.status(404).json({ message: "Piste inconnue" });
+        }
+
+        // Si une ancienne couverture existait, la supprimer du disque
+        if (track.coverStoredName) {
+          const oldPath = path.join(UPLOADS, track.coverStoredName);
+          await fsPromises.unlink(oldPath).catch(() => {});
+        }
+
+        track.coverStoredName = req.file.filename;
+        track.hasCover = true;
+        await track.save();
+
+        console.log(`[tracks] Couverture mise à jour pour la piste ${track.id}`);
+        res.json(track.toPublic());
+      } catch (error) {
+        console.error("[tracks] Erreur de mise à jour de la couverture", error);
+        if (req.file) {
+          const uploadedPath = path.join(UPLOADS, req.file.filename);
+          await fsPromises.unlink(uploadedPath).catch(() => {});
+        }
+        next(error);
+      }
+    },
+  );
+
+  /** Supprime la couverture d'un morceau pour revenir à la couverture par défaut. */
+  app.delete("/api/tracks/:id/cover", auth, async (req, res, next) => {
+    try {
+      const track = await Track.findOne({
+        _id: req.params.id,
+        ownerId: req.auth.sub,
+      }).select("+coverStoredName");
+
+      if (!track) {
+        return res.status(404).json({ message: "Piste inconnue" });
+      }
+
+      if (track.coverStoredName) {
+        const coverPath = path.join(UPLOADS, track.coverStoredName);
+        await fsPromises.unlink(coverPath).catch(() => {});
+        track.coverStoredName = undefined;
+      }
+
+      track.hasCover = false;
+      await track.save();
+
+      console.log(`[tracks] Couverture supprimée pour la piste ${track.id}`);
+      res.json(track.toPublic());
+    } catch (error) {
+      console.error("[tracks] Erreur de suppression de couverture", error);
+      next(error);
+    }
+  });
+
   /** Supprime la métadonnée et les fichiers physiques correspondants (audio et couverture). */
   app.delete("/api/tracks/:id", auth, async (req, res, next) => {
     try {
