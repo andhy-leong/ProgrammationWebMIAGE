@@ -30,4 +30,9 @@ export class TrackService {
       responseType: 'blob',
     });
   }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/tracks/${id}`);
+  }
 }
+

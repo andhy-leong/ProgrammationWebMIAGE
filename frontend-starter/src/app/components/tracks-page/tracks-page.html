@@ -42,16 +42,39 @@
       @if (loading()) {
         <p class="loading-state">Chargement des pistes en cours…</p>
       }
+      @if (deleteSuccess()) {
+        <div class="alert alert-success">{{ deleteSuccess() }}</div>
+      }
+      @if (deleteError()) {
+        <div class="alert alert-error">{{ deleteError() }}</div>
+      }
       @if (error()) {
         <div class="alert alert-error">{{ error() }}</div>
       }
       @for (track of tracks(); track track.id) {
         <div class="track">
-          <div>
+          <div class="track-details">
             <b>{{ track.title }}</b>
             <small>{{ track.originalName }} · {{ track.size }} Ko</small>
           </div>
-          <button type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
+          <div class="track-actions">
+            <button
+              type="button"
+              class="btn-play"
+              (click)="play(track)"
+              [disabled]="deletingTrackId() === track.id"
+              [attr.aria-label]="'Lire ' + track.title">
+              ▶
+            </button>
+            <button
+              type="button"
+              class="btn-delete"
+              (click)="deleteTrack(track)"
+              [disabled]="deletingTrackId() === track.id || loading()"
+              [attr.aria-label]="'Supprimer ' + track.title">
+              {{ deletingTrackId() === track.id ? '…' : '🗑' }}
+            </button>
+          </div>
         </div>
       } @empty {
         <p>Aucune piste.</p>
@@ -66,7 +89,10 @@
         aria-label="Pagination des pistes">
       </mat-paginator>
       @if (audioUrl()) {
-        <audio [src]="audioUrl()" controls autoplay></audio>
+        <div class="now-playing">
+          <small>En cours de lecture : <strong>{{ currentTrack()?.title }}</strong></small>
+          <audio [src]="audioUrl()" controls autoplay></audio>
+        </div>
       }
     </article>
   </div>

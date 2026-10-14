@@ -1,5 +1,5 @@
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Track } from '../../shared/models/track.model';
@@ -10,7 +10,7 @@ import { TrackService } from '../../shared/services/track.service';
   templateUrl: './tracks-page.html',
   styleUrl: './tracks-page.css',
 })
-export class TracksPageComponent {
+export class TracksPageComponent implements OnDestroy {
   private readonly service = inject(TrackService);
 
   readonly tracks = signal<Track[]>([]);
@@ -24,8 +24,13 @@ export class TracksPageComponent {
   readonly uploadProgress = signal(0);
   readonly uploadSuccess = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
+  readonly deletingTrackId = signal<string | null>(null);
+  readonly deleteSuccess = signal<string | null>(null);
+  readonly deleteError = signal<string | null>(null);
+  readonly currentTrack = signal<Track | null>(null);
   readonly audioUrl = signal('');
   readonly title = new FormControl('', { nonNullable: true });
+
   file?: File;
 
   constructor() {
@@ -126,8 +131,59 @@ export class TracksPageComponent {
         const previousUrl = this.audioUrl();
         if (previousUrl) URL.revokeObjectURL(previousUrl);
         this.audioUrl.set(URL.createObjectURL(blob));
+        this.currentTrack.set(track);
       },
       error: (error) => console.error('[TracksPage] Lecture impossible', error),
     });
   }
+
+  deleteTrack(track: Track): void {
+    const confirmed = window.confirm(`Voulez-vous vraiment supprimer le morceau « ${track.title} » ?`);
+    if (!confirmed) return;
+
+    this.deleteSuccess.set(null);
+    this.deleteError.set(null);
+    this.deletingTrackId.set(track.id);
+
+    this.service.delete(track.id).subscribe({
+      next: () => {
+        this.deletingTrackId.set(null);
+        this.deleteSuccess.set(`Le morceau « ${track.title} » a été supprimé avec succès.`);
+
+        // Si la piste supprimée est en cours de lecture, stopper le lecteur et libérer l'ObjectURL
+        if (this.currentTrack()?.id === track.id) {
+          const url = this.audioUrl();
+          if (url) {
+            URL.revokeObjectURL(url);
+            this.audioUrl.set('');
+          }
+          this.currentTrack.set(null);
+        }
+
+        // Limite de pagination : si la dernière piste d'une page > 1 est supprimée, revenir à la page précédente
+        if (this.tracks().length === 1 && this.page() > 1) {
+          this.page.update((p) => p - 1);
+        }
+        this.load();
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error('[TracksPage] Suppression impossible', error);
+        this.deletingTrackId.set(null);
+        const message =
+          error.status === 0
+            ? 'Serveur inaccessible lors de la suppression.'
+            : (error.error?.message ?? 'Impossible de supprimer la piste.');
+        this.deleteError.set(message);
+      },
+    });
+  }
+
+  ngOnDestroy(): void {
+    const url = this.audioUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.audioUrl.set('');
+    }
+  }
 }
+

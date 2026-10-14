@@ -761,5 +761,63 @@ Je change manuellement le gpc_token
   - Comment relier la progression à un Signal Angular et l'injecter dynamiquement dans le style CSS d'une barre de chargement via `[style.width.%]="uploadProgress()"`.
 ![alt text](image-22.png)
 
+---
+
+### 9. Suppression de morceau avec confirmation via `DELETE /api/tracks/:id` et rafraîchissement réactif
+
+- **Objectif** :  
+  Permettre la suppression sécurisée d'une piste audio depuis la bibliothèque avec confirmation préalable explicite (`window.confirm`), appel HTTP `DELETE /api/tracks/:id` (retour `204 No Content`), interruption et libération mémoire immédiate de l'audio (`URL.revokeObjectURL`) si la piste supprimée était en cours de lecture, gestion du cas limite de pagination (retour automatique à la page précédente si l'unique élément d'une page > 1 est supprimé), affichage de notifications réactives par Signals (`deleteSuccess`, `deleteError`) et actualisation automatique de la liste.
+
+- **Prompt principal** :  
+  > *« je veux implémenter la suppression d'un morceau avec la confirmation via `DELETE /api/tracks/:id` et le rafraichissement automatique de la liste. Assure toi que si la piste supprimée est en cours de lecture, le lecteur est stopé et son URL révoqué. Gère la limite de pagination, revenir à la page, affiche les messages de succès ou d'erreur éventuels avec des signals, et ajoute le bouton de suppression sur chaque carte dans la template avec un style adapté »*
+
+- **Plan proposé par l'agent** :  
+  1. Ajouter la méthode `delete(id: string): Observable<void>` dans [`TrackService`](frontend-starter/src/app/shared/services/track.service.ts).
+  2. Déclarer dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) les Signals réactifs : `currentTrack` (piste en cours d'écoute), `deleteSuccess`, `deleteError` et `deletingTrackId`.
+  3. Implémenter la méthode `deleteTrack(track: Track)` :
+     - Demander confirmation utilisateur explicite via `window.confirm`.
+     - Appeler `TrackService.delete(track.id)`.
+     - Si la piste supprimée est en lecture (`currentTrack()?.id === track.id`), stopper la lecture, révoquer son `ObjectURL` et réinitialiser `currentTrack`.
+     - Vérifier la limite de pagination : si `tracks().length === 1 && page() > 1`, décrémenter `page` via `page.update(p => p - 1)`.
+     - Recharger les données avec `load()`.
+     - Gérer les erreurs HTTP avec le signal `deleteError`.
+  4. Implémenter l'interface `OnDestroy` pour révoquer l'`ObjectURL` lors de la destruction du composant.
+  5. Intégrer dans [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) les alertes de succès/erreur, le bouton poubelle « 🗑 » avec état désactivé pendant le traitement, et le libellé du morceau en cours de lecture.
+  6. Styliser le bouton de suppression `.btn-delete` et les actions `.track-actions` dans [`tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css).
+
+- **Vérifications réalisées par le binôme** :  
+  - Clic sur le bouton « 🗑 » d'un morceau : une boîte de dialogue modale de confirmation demande : *« Voulez-vous vraiment supprimer le morceau « ... » ? »*.
+  - En cas d'annulation (« Annuler »), aucune requête réseau n'est émise et la liste reste inchangée.
+  - En cas de confirmation (« OK »), une requête HTTP `DELETE /api/tracks/:id` est envoyée avec le header `Authorization: Bearer <jwt>`. Le serveur supprime la métadonnée MongoDB ainsi que le fichier physique et répond avec un statut `204 No Content`.
+  - Si la piste supprimée est en cours d'écoute, le lecteur audio disparaît instantanément et l'URL Blob est révoquée.
+  - La liste se recharge automatiquement via `load()`, décrémentant le compteur total de morceaux dans le `mat-paginator`.
+  - Cas limite de pagination : si une page contient 1 seul élément et qu'on le supprime (ex. page 2), le signal `page` passe automatiquement à la page 1 et recharge les morceaux sans afficher de liste vide.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de la suppression sans confirmation utilisateur : une requête destructrice `DELETE` doit être protégée contre les clics accidentels.
+  - Rejet de l'oubli de libération de l'ObjectURL si le morceau en cours est supprimé : laisser l'URL active entraînerait une fuite mémoire et une incohérence UI (un morceau supprimé continuerait à pouvoir être joué).
+  - Rejet du simple rechargement sans ajustement de page : supprimer le seul élément d'une page > 1 laissait l'utilisateur sur une page vide.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/services/track.service.ts`](frontend-starter/src/app/shared/services/track.service.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.css`](frontend-starter/src/app/components/tracks-page/tracks-page.css)
+
+- **Preuve de fonctionnement** :  
+  - Requête `DELETE /api/tracks/:id` avec statut `204 No Content` observée dans l'inspecteur réseau.
+  - Message vert « Le morceau « ... » a été supprimé avec succès. » affiché réactivement.
+  - Recalcul immédiat du total de pagination et retour à la page précédente si la page active est vidée.
+  - Compilation Angular vérifiée avec succès (`npm run build`).
+
+- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
+  - Pourquoi une requête `DELETE` REST doit retourner `204 No Content` sans corps de réponse.
+  - Comment gérer la confirmation utilisateur avant l'émission d'une action destructrice.
+  - Comment gérer le cas limite de pagination (page qui devient vide) pour garantir la cohérence de l'interface utilisateur.
+  - Pourquoi et comment révoquer l'`ObjectURL` et réinitialiser l'état du lecteur audio lors de la suppression de la piste active.
+  ![alt text](image-23.png)
+  ![alt text](image-24.png)
+
+
 
 
