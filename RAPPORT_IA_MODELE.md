@@ -704,5 +704,6 @@ Je change manuellement le gpc_token
 - --> Le backend ne charge pas le fichier entier en mémoire vive mais l'envoie progressivement depuis le disque  par paquet grâce à un flux de lecture Node.js sur la réponse HTTP
 - Avec `HttpClient` et `responseType: "blob"`, à quel moment le composant reçoit-il généralement le fichier ?
 - --> Le composant reçoit le fichier uniquement lorsque son téléchargement est entièrement terminé, car `HttpClient` attend la fin complète du transfert réseau pour instancier et émettre le `Blob`
-
+- Si la bibliothèque contient 100 morceaux, les 100 fichiers audio sont-ils chargés en mémoire dès l'affichage de la liste ? Justifier la réponse à partir du code.
+- --> Non, car la méthode `load()` appelle uniquement `TrackService.list()` qui ne récupère que les métadonnées JSON de la page active, le binaire audio n'étant chargé en mémoire via `TrackService.audio(track.id)` que lors d'un clic explicite sur la méthode `play(track)`
 
