@@ -1036,3 +1036,60 @@ Je change manuellement le gpc_token
 ### 15. Explication technique du choix `Blob` et `ObjectURL` 
 
 - La balise <audio> native ne pouvant pas envoyer le token JWT, on télécharge d'abord le fichier de manière sécurisé via HttpClient sous forme de Blob binaire en mémoire RAM. L'ObjectURL transforme ensuite ce Bloc en une URL locale temporaire que la balise <audio> peut lire directement pour jouer le son sans refaire d'appel réseau.
+
+---
+
+# Rapport d'usage de l'IA — TP3
+
+## Mission 5 — Suppression d’une piste
+
+### 1. Suppression réactive d'une piste avec confirmation, MatSnackBar et gestion des erreurs (404)
+
+- **Objectif** :  
+  Mettre en place la suppression sécurisée et réactive d'une piste audio depuis sa carte : confirmation utilisateur préalable, protection anti-double clic via `deletingTrackId`, appel délégué à `TrackService.delete()`, notification utilisateur moderne via le composant Angular Material `MatSnackBar` (remplaçant les alertes statiques), réinitialisation du lecteur audio si le morceau supprimé était actif, ajustement intelligent de la pagination, et traitement dédié de l'erreur HTTP 404 (piste supprimée dans un autre onglet) avec rafraîchissement automatique de la liste.
+
+- **Prompt principal** :  
+  > *« je veux que conformément aux consignes dans le fichier sujet_etudiant_tp3.md, adapte la suppression de piste dans TracksPageComponent. Remplace les alertes actuelles par le composant Angular Material MatSnackBar pour afficher les messages de succès et d'eereur. Je veux également que tu gère le cas où l'API renvoie une erreur 404 (piste déjà supprimée dans un autre oglet ou inexistante) avec un message dédié dans la SnackBar et un rafraichissement automatique de la liste. Consèrve également la confirmation utilisateur, le blockage des doubles clics avec deletinTrackId, le paassage par TrackService et la réinitialisation du lecteur audio si la piste en cours est supprimée »*
+
+- **Plan proposé par l'agent** :  
+  1. Importer `MatSnackBarModule` et injecter `MatSnackBar` dans [`TracksPageComponent`](frontend-starter/src/app/components/tracks-page/tracks-page.ts).
+  2. Adapter la méthode `deleteTrack(track: Track)` :
+     - Conserver la confirmation préalable `window.confirm(...)`.
+     - Activer l'état `deletingTrackId.set(track.id)` pour désactiver le bouton corbeille et empêcher les doubles clics.
+     - En cas de succès : afficher un toast de succès avec `this.snackBar.open(..., { panelClass: ['snackbar-success'] })`, révoquer l'`ObjectURL` et réinitialiser `currentTrack` si la piste supprimée était active, ajuster la page si la page courante devient vide, et recharger la liste (`this.load()`).
+     - En cas d'erreur : si `status === 404`, afficher un message explicite dans la SnackBar signalant que la piste a été supprimée ou n'existe plus, et rafraîchir immédiatement la liste (`this.load()`). Pour les autres erreurs HTTP, afficher le message d'erreur dans la SnackBar.
+  3. Nettoyer [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) en supprimant les bannières d'alerte statiques devenues superflues.
+  4. Ajouter les styles personnalisés haute lisibilité pour `.snackbar-success` et `.snackbar-error` dans [`styles.css`](frontend-starter/src/styles.css).
+
+- **Vérifications réalisées par le binôme** :  
+  - Clic sur l'icône 🗑 d'une piste : ouverture de la boîte de dialogue de confirmation.
+  - Confirmation : désactivation immédiate du bouton (affichage `…`), émission de la requête HTTP `DELETE /api/tracks/:id` (statut `204 No Content`).
+  - Affichage instantané du message de succès dans la SnackBar Angular Material en bas de l'écran avec bouton « Fermer ».
+  - Suppression de la piste en cours d'écoute : le lecteur audio est immédiatement réinitialisé et l'`ObjectURL` révoqué de la mémoire RAM.
+  - Test de suppression simultanée (concurrence multi-onglets) : ouverture de l'application dans deux onglets, suppression d'une piste dans l'onglet A, tentative de suppression de la même piste dans l'onglet B : réception du statut `404 Not Found`, affichage du toast rouge *« Cette piste n'existe plus ou a déjà été supprimée »* et rechargement automatique de la liste.
+  - Validation du build TypeScript via `npm run build` (0 erreur).
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de l'utilisation d'alertes HTML statiques en haut de tableau qui décalent brutalement le contenu de la page : `MatSnackBar` offre une expérience utilisateur moderne (toast flottant non intrusif avec auto-fermeture).
+  - Rejet de l'omission du rafraîchissement lors d'une erreur 404 : laisser une carte orpheline sur l'écran déroute l'utilisateur ; forcer `this.load()` resynchronise instantanément le frontend avec la réalité de la base MongoDB.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/styles.css`](frontend-starter/src/styles.css)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Notification `MatSnackBar` fonctionnelle avec disparition automatique et style cohérent avec le thème.
+  - Traitement complet des cas nominaux et d'erreur 404 validé.
+
+- **Preuve 1**
+  ![alt text](image-41.png)
+  ![alt text](image-42.png)
+- **Preuve 2**
+  ![alt text](image-43.png)
+  J'ai supprimé la chanson AVICII - The nights du premier onglet mais la piste reste visible sur l'autre onglet
+  ![alt text](image-44.png)
+  J'essaie donc de la supprimer sur le deuxième onglet et ça m'affiche un message d'erreur
+  ![alt text](image-45.png)
+
+  

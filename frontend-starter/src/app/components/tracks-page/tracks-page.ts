@@ -3,19 +3,22 @@ import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Track } from '../../shared/models/track.model';
 import { FileSizePipe } from '../../shared/pipes/file-size.pipe';
 import { AuthService } from '../../shared/services/auth.service';
 import { TrackService } from '../../shared/services/track.service';
 
 @Component({
-  imports: [ReactiveFormsModule, MatPaginatorModule, DatePipe, FileSizePipe],
+  imports: [ReactiveFormsModule, MatPaginatorModule, MatSnackBarModule, DatePipe, FileSizePipe],
   templateUrl: './tracks-page.html',
   styleUrl: './tracks-page.css',
 })
 export class TracksPageComponent implements OnDestroy {
   private readonly service = inject(TrackService);
   private readonly auth = inject(AuthService);
+  private readonly snackBar = inject(MatSnackBar);
+
 
   readonly tracks = signal<Track[]>([]);
   readonly page = signal(1);
@@ -29,8 +32,6 @@ export class TracksPageComponent implements OnDestroy {
   readonly uploadSuccess = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
   readonly deletingTrackId = signal<string | null>(null);
-  readonly deleteSuccess = signal<string | null>(null);
-  readonly deleteError = signal<string | null>(null);
   readonly currentTrack = signal<Track | null>(null);
   readonly audioUrl = signal('');
   readonly title = new FormControl('', { nonNullable: true });
@@ -338,14 +339,15 @@ export class TracksPageComponent implements OnDestroy {
     const confirmed = window.confirm(`Voulez-vous vraiment supprimer le morceau « ${track.title} » ?`);
     if (!confirmed) return;
 
-    this.deleteSuccess.set(null);
-    this.deleteError.set(null);
     this.deletingTrackId.set(track.id);
 
     this.service.delete(track.id).subscribe({
       next: () => {
         this.deletingTrackId.set(null);
-        this.deleteSuccess.set(`Le morceau « ${track.title} » a été supprimé avec succès.`);
+        this.snackBar.open(`Le morceau « ${track.title} » a été supprimé avec succès.`, 'Fermer', {
+          duration: 3500,
+          panelClass: ['snackbar-success'],
+        });
 
         // Si la piste supprimée est en cours de lecture, stopper le lecteur et libérer l'ObjectURL
         if (this.currentTrack()?.id === track.id) {
@@ -366,11 +368,38 @@ export class TracksPageComponent implements OnDestroy {
       error: (error: HttpErrorResponse) => {
         console.error('[TracksPage] Suppression impossible', error);
         this.deletingTrackId.set(null);
-        const message =
-          error.status === 0
-            ? 'Serveur inaccessible lors de la suppression.'
-            : (error.error?.message ?? 'Impossible de supprimer la piste.');
-        this.deleteError.set(message);
+
+        // Si la piste supprimée est en cours de lecture, réinitialiser le lecteur audio
+        if (this.currentTrack()?.id === track.id) {
+          const url = this.audioUrl();
+          if (url) {
+            URL.revokeObjectURL(url);
+            this.audioUrl.set('');
+          }
+          this.currentTrack.set(null);
+        }
+
+        if (error.status === 404) {
+          this.snackBar.open(
+            `Cette piste n'existe plus ou a déjà été supprimée (par exemple dans un autre onglet).`,
+            'Fermer',
+            {
+              duration: 5000,
+              panelClass: ['snackbar-error'],
+            }
+          );
+          // Rafraîchir la liste pour synchroniser l'affichage
+          this.load();
+        } else {
+          const message =
+            error.status === 0
+              ? 'Serveur inaccessible lors de la suppression.'
+              : (error.error?.message ?? 'Impossible de supprimer la piste.');
+          this.snackBar.open(message, 'Fermer', {
+            duration: 4000,
+            panelClass: ['snackbar-error'],
+          });
+        }
       },
     });
   }

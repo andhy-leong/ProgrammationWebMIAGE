@@ -35,3 +35,27 @@ audio { width: 100%; }
   nav { margin-top: 1rem; }
   .grid .card { margin-bottom: 1rem; }
 }
+
+/* Styles pour Angular Material MatSnackBar */
+.snackbar-success .mdc-snackbar__surface {
+  background-color: #123d32 !important;
+}
+.snackbar-success .mdc-snackbar__label {
+  color: #ffffff !important;
+  font-weight: 500;
+}
+.snackbar-success .mat-mdc-button {
+  color: #a7f3d0 !important;
+}
+
+.snackbar-error .mdc-snackbar__surface {
+  background-color: #991b1b !important;
+}
+.snackbar-error .mdc-snackbar__label {
+  color: #ffffff !important;
+  font-weight: 500;
+}
+.snackbar-error .mat-mdc-button {
+  color: #fecaca !important;
+}
+

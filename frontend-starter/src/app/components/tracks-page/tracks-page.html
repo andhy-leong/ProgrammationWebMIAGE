@@ -54,12 +54,7 @@
       @if (loading()) {
         <p class="loading-state">Chargement des pistes en cours…</p>
       }
-      @if (deleteSuccess()) {
-        <div class="alert alert-success">{{ deleteSuccess() }}</div>
-      }
-      @if (deleteError()) {
-        <div class="alert alert-error">{{ deleteError() }}</div>
-      }
+
       @if (coverMessage()) {
         <div class="alert alert-success">{{ coverMessage() }}</div>
       }
