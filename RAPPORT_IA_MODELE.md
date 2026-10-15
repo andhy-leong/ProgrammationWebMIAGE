@@ -1015,13 +1015,6 @@ Je change manuellement le gpc_token
   - Rafraîchissement visuel instantané de l'image de couverture et du lecteur sans rechargement de page.
   - Notification verte de confirmation affichée après chaque opération.
 
-- **Ce que chaque membre sait maintenant expliquer sans l'agent** :  
-  - Pourquoi le cache HTTP du navigateur nécessite un mécanisme de cache-busting (paramètre d'URL dynamique `&v=${timestamp}`) pour refléter immédiatement une ressource d'image modifiée sous une même URL d'API.
-  - Comment synchroniser de façon granulaire et réactive un tableau de données dans un Signal Angular (`this.tracks.update(list => list.map(...))`) sans devoir recharger toute la liste via une requête HTTP superflue.
-  - Comment déclencher un sélecteur de fichier HTML de manière accessible et ergonomique sans afficher l'élément natif `input[type="file"]`.
-  ![alt text](image-30.png)
-  ![alt text](image-31.png)
-
 ---
 
 ### 14. Checkpoint 
@@ -1037,3 +1030,9 @@ Je change manuellement le gpc_token
 ![alt text](image-38.png)
 ![alt text](image-39.png)
 ![alt text](image-40.png)
+
+---
+
+### 15. Explication technique du choix `Blob` et `ObjectURL` 
+
+- La balise <audio> native ne pouvant pas envoyer le token JWT, on télécharge d'abord le fichier de manière sécurisé via HttpClient sous forme de Blob binaire en mémoire RAM. L'ObjectURL transforme ensuite ce Bloc en une URL locale temporaire que la balise <audio> peut lire directement pour jouer le son sans refaire d'appel réseau.
