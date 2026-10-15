@@ -1092,4 +1092,6 @@ Je change manuellement le gpc_token
   J'essaie donc de la supprimer sur le deuxième onglet et ça m'affiche un message d'erreur
   ![alt text](image-45.png)
 
-  
+  **pourquoi le guard Angular et l’interface ne suffisent pas à sécuriser la suppression**
+- L'interface et les guards s'exécutent dans le navigateur et peuvent être facilement contournés par n'importe qui.
+Seul le backend est inviolable : c'est lui qui contrôle cryptographiquement le jeton JWT et vérifie directement en base de données que le morceau appartient bien à l'utilisateur connecté avant d'autoriser sa supression.
