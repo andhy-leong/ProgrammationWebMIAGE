@@ -1092,6 +1092,61 @@ Je change manuellement le gpc_token
   J'essaie donc de la supprimer sur le deuxième onglet et ça m'affiche un message d'erreur
   ![alt text](image-45.png)
 
-  **pourquoi le guard Angular et l’interface ne suffisent pas à sécuriser la suppression**
+**Pourquoi le guard Angular et l’interface ne suffisent pas à sécuriser la suppression**
 - L'interface et les guards s'exécutent dans le navigateur et peuvent être facilement contournés par n'importe qui.
 Seul le backend est inviolable : c'est lui qui contrôle cryptographiquement le jeton JWT et vérifie directement en base de données que le morceau appartient bien à l'utilisateur connecté avant d'autoriser sa supression.
+
+---
+
+## Mission 6 — Progression de l’upload
+
+### 1. Suivi d'upload en temps réel avec événements HTTP (`HttpEvent`), 4 états réactifs et verrouillage des contrôles
+
+- **Objectif** :  
+  Faire évoluer le mécanisme de téléversement pour suivre et afficher en temps réel la progression de l'envoi du fichier audio (et de sa pochette optionnelle) à l'aide des événements HTTP Angular (`reportProgress: true`, `observe: 'events'`), distinguer strictement 4 états d'interface pilotés par des Signals (absence d'upload, envoi en cours avec barre et pourcentage dynamique, succès, échec), et verrouiller l'intégralité des champs de saisie et boutons pendant l'opération pour interdire toute double soumission.
+
+- **Prompt principal** :  
+  > *« J'aimerais que tu m'implémente et valide l mission 6 du fichier sujet_etudiant_tp3.md sur la progression de l'upload. Je veux qeu tu vérifies et assure que les 4 états distincts sont clairement gérés avec les Signals (absence d'upload, upload en cours avec une barre et pourcentage dynamique, réussite et échec). Je veux également que tu vérifie le blocage complet de tous les controles (inputs titres/fichiers et bouton envoyer) pendant l'envoi pour interdire toute seconde soumission. »*
+
+- **Plan proposé par l'agent** :  
+  1. Configurer la requête dans [`TrackService.upload()`](frontend-starter/src/app/shared/services/track.service.ts) avec `{ reportProgress: true, observe: 'events' }` renvoyant un `Observable<HttpEvent<Track>>`.
+  2. Dans [`TracksPageComponent.upload()`](frontend-starter/src/app/components/tracks-page/tracks-page.ts) :
+     - Gérer les 4 états réactifs via les Signals `uploading`, `uploadProgress`, `uploadSuccess` et `uploadError`.
+     - Verrouiller immédiatement l'envoi avec `uploading.set(true)`, `this.title.disable()` et la condition de garde `if (!this.file || this.uploading()) return;`.
+     - Écouter `event.type === HttpEventType.UploadProgress` pour calculer `Math.round((100 * event.loaded) / event.total)` et mettre à jour le Signal `uploadProgress`.
+     - Écouter `event.type === HttpEventType.Response` pour réactiver les contrôles (`this.title.enable()`, `uploading.set(false)`), réinitialiser les champs de fichiers et rafraîchir la liste de pistes.
+     - En cas d'erreur HTTP (`error`), réinitialiser `uploading.set(false)`, réactiver le champ titre et alimenter `uploadError`.
+  3. Dans [`tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html) :
+     - Désactiver les `<input>` (titre, audio, cover) et le `<button>` « Envoyer » dès que `uploading()` est vrai.
+     - Afficher la barre de progression (`.progress-bar`) proportionnellement à `uploadProgress()`, ainsi que l'indicateur textuel de pourcentage (`%`).
+  4. Rédiger l'explication théorique sur la différence fondamentale entre une requête classique et une requête avec progression d'événements multiples.
+
+- **Vérifications réalisées par le binôme** :  
+  - Sélection d'un fichier audio lourd (ou simulation de ralentissement réseau « Fast 3G / Slow 3G » dans DevTools Network) :
+    - Les champs Titre, Fichier audio, Image et le bouton d'envoi passent immédiatement en état désactivé (`disabled`).
+    - L'indicateur affiche l'avancement dynamique : `12%` $\rightarrow$ `45%` $\rightarrow$ `80%` $\rightarrow$ `100%`.
+    - La largeur de la barre de progression suit fidèlement l'évolution en continu.
+    - Tentative de clic répété sur le bouton « Envoi en cours… » : aucun effet, le bouton est totalement inerte et la méthode retourne immédiatement sans déclencher de second appel HTTP.
+  - À la fin du transfert :
+    - Réception de l'événement `HttpEventType.Response` avec statut `201 Created`.
+    - Réactivation des contrôles, affichage de la bannière verte de succès et actualisation de la bibliothèque.
+  - Test d'erreur (téléversement d'un fichier invalide ou serveur arrêté) :
+    - Réinitialisation de l'état d'envoi, affichage de l'alerte d'erreur rouge et réactivation des contrôles pour permettre une nouvelle tentative.
+  - Vérification de la sécurité : aucune donnée sensible (mot de passe ou token JWT) n'apparaît dans la console ou le template.
+  - Validation du build : `npm run build` exécuté avec succès (0 erreur).
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet d'un simple `HttpClient.post()` sans options `observe: 'events'` : une requête classique n'émet qu'une unique valeur à la fin du téléchargement, rendant impossible tout calcul de progression.
+  - Rejet du blocage uniquement visuel en CSS : le verrouillage est doublement sécurisé côté logique TypeScript (`if (this.uploading()) return`) et côté DOM (`[disabled]="uploading()"` et `this.title.disable()`).
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/src/app/shared/services/track.service.ts`](frontend-starter/src/app/shared/services/track.service.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.ts`](frontend-starter/src/app/components/tracks-page/tracks-page.ts)
+  - [`frontend-starter/src/app/components/tracks-page/tracks-page.html`](frontend-starter/src/app/components/tracks-page/tracks-page.html)
+
+- **Preuve de fonctionnement** :  
+  - Déroulement visuel complet des 4 états d'upload avec progression chiffrée et verrouillage strict des contrôles.
+  ![alt text](image-46.png)
+
+**Pourquoi un upload avec progression ne se traite pas exactement comme une requête HTTP qui émet uniquement une réponse finale?**
+- Une requête classique n'émet qu'une seule réponse à la fin du téléchargement. A l'inverse, un upload avec progression émet un flux de plusieurs évènement intermédiaires (HttpClient) tout au long de l'envoi. Le code doit donc analyser le type de chaque évènement pour mettre à jour la jauge de pourcentage au fur et à mesure, avant de traiter la confirmation finale.

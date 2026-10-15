@@ -282,6 +282,7 @@ export class TracksPageComponent implements OnDestroy {
     this.uploadProgress.set(0);
     this.uploadSuccess.set(null);
     this.uploadError.set(null);
+    this.title.disable();
 
     const uploadedFileName = this.file.name;
     const trackTitle = this.title.value || uploadedFileName;
@@ -296,6 +297,7 @@ export class TracksPageComponent implements OnDestroy {
           console.debug('[TracksPage] Piste envoyée', track?.id);
           this.uploadProgress.set(100);
           this.uploading.set(false);
+          this.title.enable();
           this.uploadSuccess.set(`Piste « ${track?.title ?? trackTitle} » importée avec succès.`);
           this.title.setValue('');
           this.file = undefined;
@@ -313,6 +315,7 @@ export class TracksPageComponent implements OnDestroy {
         console.error('[TracksPage] Envoi impossible', error);
         this.uploading.set(false);
         this.uploadProgress.set(0);
+        this.title.enable();
         const message =
           error.status === 0
             ? 'Serveur inaccessible lors du téléversement.'
