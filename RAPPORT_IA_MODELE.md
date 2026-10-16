@@ -1150,3 +1150,60 @@ Seul le backend est inviolable : c'est lui qui contrôle cryptographiquement le 
 
 **Pourquoi un upload avec progression ne se traite pas exactement comme une requête HTTP qui émet uniquement une réponse finale?**
 - Une requête classique n'émet qu'une seule réponse à la fin du téléchargement. A l'inverse, un upload avec progression émet un flux de plusieurs évènement intermédiaires (HttpClient) tout au long de l'envoi. Le code doit donc analyser le type de chaque évènement pour mettre à jour la jauge de pourcentage au fur et à mesure, avant de traiter la confirmation finale.
+
+---
+
+## Mission 7 — Tests automatisés (Frontend & Backend) et Vérifications finales
+
+### 1. Tests unitaires isolés frontend avec `HttpTestingController` et tests de contrat/sécurité backend
+
+- **Objectif** :  
+  Mettre en place une suite complète de tests automatisés sans dépendance envers une base de données en cours d'exécution :
+  1. Côté frontend : installer l'environnement DOM (`jsdom`), configurer `angular.json` et créer 3 suites de tests unitaires isolés vérifiant les URLs, méthodes HTTP, en-têtes d'autorisation et paramètres de pagination (`AuthService.login`, `TrackService.list`, `authInterceptor`).
+  2. Côté backend : enrichir `backend/test/api.test.js` avec des tests de contrat et de sécurité (rejets 401 sans token ou avec faux token, rejets 400 upload sans fichier ou format audio invalide).
+  3. Vérifications finales : exécution de `npm test` frontend (4/4 pass), `npm test` backend (7/7 pass), et compilation `npm run build` (0 erreur).
+
+- **Prompt principal** :  
+  > *« Implémente la Mission 7 (Tests automatisés) et les vérifications finales du TP3 :
+  > 1. Côté Frontend :
+  >    - Installe l'environnement de test DOM nécessaire (jsdom) pour exécuter ng test avec Vitest.
+  >    - Écris 3 tests unitaires isolés avec HttpTestingController vérifiant les URLs, méthodes, headers et paramètres simulés :
+  >      a. AuthService.login() utilise POST /api/auth/login avec le bon corps et stocke le token.
+  >      b. TrackService.list() transmet correctement les paramètres de pagination page et limit.
+  >      c. L'intercepteur authInterceptor injecte bien l'en-tête Authorization: Bearer <token> quand un token existe.
+  > 2. Côté Backend :
+  >    - Complète backend/test/api.test.js sans modifier le code des routes pour tester la sécurité et le contrat d'API (401 sans token, 401 avec token invalide, 400 upload sans fichier, 400 format audio refusé).
+  > 3. Exécute et valide les tests frontend et backend avec npm test, ainsi que npm run build.
+  > 4. Remplis la section Mission 7 dans RAPPORT_IA_MODELE.md. »*
+
+- **Plan proposé par l'agent** :  
+  1. Installer `jsdom` en devDependency dans `frontend-starter` et corriger la configuration de build `development` dans `angular.json`.
+  2. Créer les tests unitaires frontend avec `HttpTestingController` :
+     - [`auth.service.spec.ts`](frontend-starter/src/app/shared/services/auth.service.spec.ts) : teste `POST /api/auth/login`, corps envoyé et persistance du token dans le Signal `token`.
+     - [`track.service.spec.ts`](frontend-starter/src/app/shared/services/track.service.spec.ts) : teste `GET /api/tracks`, transmission des query params `page` et `limit`.
+     - [`auth.interceptor.spec.ts`](frontend-starter/src/app/shared/interceptors/auth.interceptor.spec.ts) : teste l'injection automatique du header `Authorization: Bearer <token>` et son absence si déconnecté.
+  3. Compléter [`backend/test/api.test.js`](backend/test/api.test.js) avec des tests de sécurité (rejet 401 sans JWT, rejet 401 avec JWT falsifié, 400 sans fichier, 400 mauvais type MIME).
+  4. Exécuter l'ensemble des suites avec `npm test` (front et back) et valider le build de production (`npm run build`).
+
+- **Vérifications réalisées par le binôme** :  
+  - Exécution des tests frontend : `ng test --watch=false` exécute 3 suites et 4 tests avec 100 % de succès en 2.2 secondes.
+  - Exécution des tests backend : `node --test` exécute 7 tests avec 100 % de succès en 1.1 seconde.
+  - Exécution du build Angular : `npm run build` termine avec succès en 4.5 secondes sans warning bloquant.
+  - Vérification de l'isolation : les tests frontend s'exécutent intégralement en mémoire vive sans requérir que le serveur Node ou MongoDB ne soient allumés.
+
+- **Erreurs ou propositions rejetées** :  
+  - Rejet de tests frontend dépendant d'un vrai backend en marche : les tests unitaires doivent être déterministes, ultra-rapides et reproductibles en intégration continue (CI/CD) grâce à `HttpTestingController`.
+  - Rejet de la modification des routes backend pour les tests : l'extension de test valide le contrat d'API existant en boîte noire via des requêtes HTTP simulées.
+
+- **Fichiers effectivement modifiés** :  
+  - [`frontend-starter/package.json`](frontend-starter/package.json)
+  - [`frontend-starter/angular.json`](frontend-starter/angular.json)
+  - [`frontend-starter/src/app/shared/services/auth.service.spec.ts`](frontend-starter/src/app/shared/services/auth.service.spec.ts)
+  - [`frontend-starter/src/app/shared/services/track.service.spec.ts`](frontend-starter/src/app/shared/services/track.service.spec.ts)
+  - [`frontend-starter/src/app/shared/interceptors/auth.interceptor.spec.ts`](frontend-starter/src/app/shared/interceptors/auth.interceptor.spec.ts)
+  - [`backend/test/api.test.js`](backend/test/api.test.js)
+
+- **Preuve de fonctionnement** :  
+  - Sortie console des tests frontend : 3 fichiers validés, 4 tests passés.
+  - Sortie console des tests backend : 7 tests passés (dont 4 nouveaux tests de contrat et sécurité).
+  - Compilation `npm run build` réussie avec code retour 0.

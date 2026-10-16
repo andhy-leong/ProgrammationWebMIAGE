@@ -50,3 +50,68 @@ test("protection auth sur PUT /api/users/me/password et DELETE /api/users/me", a
   assert.equal(rDel.status, 401);
 });
 
+test("sécurité : rejet 401 sans token JWT sur /api/tracks", async () => {
+  const rGet = await fetch(base + "/api/tracks");
+  assert.equal(rGet.status, 401);
+
+  const rDelete = await fetch(base + "/api/tracks/fake-id", { method: "DELETE" });
+  assert.equal(rDelete.status, 401);
+});
+
+test("sécurité : rejet 401 avec un JWT invalide", async () => {
+  const r = await fetch(base + "/api/tracks", {
+    headers: { Authorization: "Bearer token-invalide-ou-corrompu" },
+  });
+  assert.equal(r.status, 401);
+  const data = await r.json();
+  assert.equal(data.message, "Jeton invalide ou expiré");
+});
+
+test("contrat d'API : upload sans fichier audio retourne 400", async () => {
+  // Génération d'un token valide pour tester Multer
+  const jwt = await import("jsonwebtoken");
+  const SECRET = process.env.JWT_SECRET || "tp1-development-secret";
+  const validToken = jwt.default.sign(
+    { sub: new mongoose.Types.ObjectId().toString(), email: "tester@example.com" },
+    SECRET,
+  );
+
+  const form = new FormData();
+  form.append("title", "Track sans fichier audio");
+
+  const r = await fetch(base + "/api/tracks", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${validToken}` },
+    body: form,
+  });
+
+  assert.equal(r.status, 400);
+  const data = await r.json();
+  assert.equal(data.message, "Fichier audio requis");
+});
+
+test("contrat d'API : upload avec type MIME audio refusé retourne 400", async () => {
+  const jwt = await import("jsonwebtoken");
+  const SECRET = process.env.JWT_SECRET || "tp1-development-secret";
+  const validToken = jwt.default.sign(
+    { sub: new mongoose.Types.ObjectId().toString(), email: "tester@example.com" },
+    SECRET,
+  );
+
+  const form = new FormData();
+  form.append("title", "Fichier non supporté");
+  const fakeFile = new Blob(["ceci n'est pas un fichier audio"], { type: "text/plain" });
+  form.append("audio", fakeFile, "test.txt");
+
+  const r = await fetch(base + "/api/tracks", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${validToken}` },
+    body: form,
+  });
+
+  assert.equal(r.status, 400);
+  const data = await r.json();
+  assert.equal(data.message, "Format audio non accepté");
+});
+
+

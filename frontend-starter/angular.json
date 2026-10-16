@@ -20,6 +20,11 @@
                         "styles": [
                             "src/styles.css"
                         ]
+                    },
+                    "configurations": {
+                        "development": {
+                            "optimization": false
+                        }
                     }
                 },
                 "serve": {
