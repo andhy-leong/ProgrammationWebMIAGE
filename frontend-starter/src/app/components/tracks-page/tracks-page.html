@@ -195,7 +195,18 @@
           />
           <div class="now-playing-info">
             <small>En cours de lecture : <strong>{{ currentTrack()?.title }}</strong></small>
-            <audio [src]="audioUrl()" controls autoplay></audio>
+            <!-- #player permet d'accéder à la balise audio depuis le code -->
+            <audio #player [src]="audioUrl()" controls autoplay (loadedmetadata)="applySpeed(player)"></audio>
+
+            <!-- Choix de la vitesse de lecture -->
+            <label class="inline-select">
+              <span>Vitesse</span>
+              <select (change)="changeSpeed($event, player)" aria-label="Vitesse de lecture">
+                @for (speed of speeds; track speed) {
+                  <option [value]="speed" [selected]="speed === playbackSpeed()">x{{ speed }}</option>
+                }
+              </select>
+            </label>
           </div>
         </div>
       }

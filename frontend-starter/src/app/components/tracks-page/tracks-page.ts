@@ -34,6 +34,12 @@ export class TracksPageComponent implements OnDestroy {
   readonly deletingTrackId = signal<string | null>(null);
   readonly currentTrack = signal<Track | null>(null);
   readonly audioUrl = signal('');
+
+  // Vitesses de lecture proposées (de x0.25 à x2.5)
+  readonly speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5];
+  // Vitesse choisie actuellement (x1 = vitesse normale)
+  readonly playbackSpeed = signal(1);
+
   readonly title = new FormControl('', { nonNullable: true });
 
   coverFile?: File;
@@ -336,6 +342,20 @@ export class TracksPageComponent implements OnDestroy {
       },
       error: (error) => console.error('[TracksPage] Lecture impossible', error),
     });
+  }
+
+  // Appelée quand l'utilisateur choisit une vitesse dans la liste
+  changeSpeed(event: Event, player: HTMLAudioElement): void {
+    const select = event.target as HTMLSelectElement;
+    const speed = Number(select.value);
+    this.playbackSpeed.set(speed);
+    player.playbackRate = speed;
+  }
+
+  // Appelée quand une nouvelle piste est chargée :
+  // le navigateur remet la vitesse à x1, donc on remet la vitesse choisie
+  applySpeed(player: HTMLAudioElement): void {
+    player.playbackRate = this.playbackSpeed();
   }
 
   deleteTrack(track: Track): void {
