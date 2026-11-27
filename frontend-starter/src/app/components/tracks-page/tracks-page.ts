@@ -40,6 +40,10 @@ export class TracksPageComponent implements OnDestroy {
   // Vitesse choisie actuellement (x1 = vitesse normale)
   readonly playbackSpeed = signal(1);
 
+  // Mode de répétition :
+  // 'none' = pas de répétition, 'one' = répéter la musique, 'all' = répéter la playlist
+  readonly repeatMode = signal('none');
+
   readonly title = new FormControl('', { nonNullable: true });
 
   coverFile?: File;
@@ -356,6 +360,36 @@ export class TracksPageComponent implements OnDestroy {
   // le navigateur remet la vitesse à x1, donc on remet la vitesse choisie
   applySpeed(player: HTMLAudioElement): void {
     player.playbackRate = this.playbackSpeed();
+  }
+
+  // Appelée quand l'utilisateur choisit un mode de répétition
+  changeRepeatMode(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.repeatMode.set(select.value);
+  }
+
+  // Appelée quand une musique est terminée
+  // (en mode 'one', elle n'est jamais appelée car le navigateur relance la musique tout seul)
+  onTrackEnded(): void {
+    if (this.repeatMode() !== 'all') {
+      return; // pas de répétition de playlist : on s'arrête là
+    }
+
+    const playlist = this.filteredTracks();
+    if (playlist.length === 0) {
+      return;
+    }
+
+    // On cherche la position de la musique qui vient de se terminer
+    const currentIndex = playlist.findIndex((t) => t.id === this.currentTrack()?.id);
+
+    // On passe à la suivante. Si c'était la dernière, on revient à la première (index 0)
+    let nextIndex = currentIndex + 1;
+    if (nextIndex >= playlist.length) {
+      nextIndex = 0;
+    }
+
+    this.play(playlist[nextIndex]);
   }
 
   deleteTrack(track: Track): void {

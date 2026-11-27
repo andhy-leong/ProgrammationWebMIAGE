@@ -196,7 +196,27 @@
           <div class="now-playing-info">
             <small>En cours de lecture : <strong>{{ currentTrack()?.title }}</strong></small>
             <!-- #player permet d'accéder à la balise audio depuis le code -->
-            <audio #player [src]="audioUrl()" controls autoplay (loadedmetadata)="applySpeed(player)"></audio>
+            <!-- [loop] : si vrai, le navigateur relance tout seul la même musique -->
+            <!-- (ended) : appelé quand la musique est terminée -->
+            <audio
+              #player
+              [src]="audioUrl()"
+              controls
+              autoplay
+              [loop]="repeatMode() === 'one'"
+              (loadedmetadata)="applySpeed(player)"
+              (ended)="onTrackEnded()">
+            </audio>
+
+            <!-- Choix du mode de répétition -->
+            <label class="inline-select">
+              <span>Répétition</span>
+              <select (change)="changeRepeatMode($event)" aria-label="Mode de répétition">
+                <option value="none" [selected]="repeatMode() === 'none'">Aucune</option>
+                <option value="one" [selected]="repeatMode() === 'one'">🔂 Répéter la musique</option>
+                <option value="all" [selected]="repeatMode() === 'all'">🔁 Répéter la playlist</option>
+              </select>
+            </label>
 
             <!-- Choix de la vitesse de lecture -->
             <label class="inline-select">
