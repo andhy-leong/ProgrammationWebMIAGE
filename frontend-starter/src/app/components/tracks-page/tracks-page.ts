@@ -34,6 +34,9 @@ export class TracksPageComponent implements OnDestroy {
   readonly deletingTrackId = signal<string | null>(null);
   // Identifiant de la piste en cours de renommage (pour afficher ⏳ sur son bouton)
   readonly renamingTrackId = signal<string | null>(null);
+
+  // Liste des pistes mises en favoris (affichée dans la section « Mes favoris »)
+  readonly favorites = signal<Track[]>([]);
   readonly currentTrack = signal<Track | null>(null);
   readonly audioUrl = signal('');
 
@@ -112,6 +115,37 @@ export class TracksPageComponent implements OnDestroy {
 
   constructor() {
     this.load();
+    this.loadFavorites();
+  }
+
+  // Charge la liste des favoris depuis le serveur
+  loadFavorites(): void {
+    this.service.favorites().subscribe({
+      next: (list) => this.favorites.set(list),
+      error: (error) => console.error('[TracksPage] Chargement des favoris impossible', error),
+    });
+  }
+
+  // Appelée quand l'utilisateur clique sur l'étoile ☆ / ★
+  toggleFavorite(track: Track): void {
+    // Si la piste est déjà en favoris, on la retire. Sinon, on l'ajoute.
+    const newValue = !track.isFavorite;
+
+    this.service.setFavorite(track.id, newValue).subscribe({
+      next: () => {
+        // On met à jour l'étoile dans la liste « Mes pistes »
+        this.tracks.update((list) =>
+          list.map((t) => (t.id === track.id ? { ...t, isFavorite: newValue } : t))
+        );
+        // On recharge la section « Mes favoris »
+        this.loadFavorites();
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error('[TracksPage] Favori impossible', error);
+        const message = error.error?.message ?? 'Impossible de modifier les favoris.';
+        this.snackBar.open(message, 'Fermer', { duration: 4000 });
+      },
+    });
   }
 
   setSearch(event: Event): void {
@@ -200,6 +234,7 @@ export class TracksPageComponent implements OnDestroy {
           this.currentTrack.update((current) => (current ? { ...current, hasCover: true } : null));
         }
 
+        this.loadFavorites(); // la nouvelle pochette s'affiche aussi dans « Mes favoris »
         this.coverMessage.set(`L'image de couverture du morceau « ${track.title} » a été mise à jour.`);
         this.updatingCoverTrackId.set(null);
         input.value = '';
@@ -238,6 +273,7 @@ export class TracksPageComponent implements OnDestroy {
           this.currentTrack.update((current) => (current ? { ...current, hasCover: false } : null));
         }
 
+        this.loadFavorites(); // l'image par défaut s'affiche aussi dans « Mes favoris »
         this.coverMessage.set(`L'image personnalisée de « ${track.title} » a été supprimée (image par défaut rétablie).`);
         this.updatingCoverTrackId.set(null);
       },
@@ -432,6 +468,7 @@ export class TracksPageComponent implements OnDestroy {
         }
 
         this.renamingTrackId.set(null);
+        this.loadFavorites(); // le titre change aussi dans « Mes favoris »
         this.snackBar.open(`Piste renommée en « ${title} ».`, 'Fermer', { duration: 3500 });
       },
       error: (error: HttpErrorResponse) => {
@@ -472,6 +509,7 @@ export class TracksPageComponent implements OnDestroy {
           this.page.update((p) => p - 1);
         }
         this.load();
+        this.loadFavorites(); // la piste supprimée disparaît aussi de « Mes favoris »
       },
       error: (error: HttpErrorResponse) => {
         console.error('[TracksPage] Suppression impossible', error);

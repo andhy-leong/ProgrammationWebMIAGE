@@ -6,6 +6,7 @@ export interface Track {
   mimeType: string;
   size: number;
   hasCover?: boolean;
+  isFavorite?: boolean;
   createdAt: string;
 }
 

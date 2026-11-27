@@ -20,6 +20,8 @@ const schema = new mongoose.Schema(
     size: { type: Number, required: true, min: 0 },
     coverStoredName: { type: String, select: false },
     hasCover: { type: Boolean, default: false },
+    // true si l'utilisateur a mis la piste en favoris
+    isFavorite: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
@@ -41,6 +43,7 @@ schema.methods.toPublic = function () {
     mimeType: this.mimeType,
     size: this.size,
     hasCover: Boolean(this.hasCover || this.coverStoredName),
+    isFavorite: Boolean(this.isFavorite),
     createdAt: this.createdAt,
   };
 };

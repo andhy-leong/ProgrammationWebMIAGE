@@ -54,6 +54,16 @@ export class TrackService {
     return this.http.delete<Track>(`/api/tracks/${id}/cover`);
   }
 
+  /** Récupère toutes les pistes mises en favoris. */
+  favorites(): Observable<Track[]> {
+    return this.http.get<Track[]>('/api/tracks/favorites');
+  }
+
+  /** Ajoute (true) ou retire (false) une piste des favoris. */
+  setFavorite(id: string, isFavorite: boolean): Observable<Track> {
+    return this.http.put<Track>(`/api/tracks/${id}/favorite`, { isFavorite });
+  }
+
   /** Renomme une piste (change son titre). */
   rename(id: string, title: string): Observable<Track> {
     return this.http.put<Track>(`/api/tracks/${id}`, { title });

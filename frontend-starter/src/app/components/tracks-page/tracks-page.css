@@ -335,6 +335,56 @@
   color: #17312a;
 }
 
+/* Bouton étoile pour les favoris */
+.btn-favorite {
+  padding: 0.35rem 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: white;
+  color: #d4a017;
+  border: 1px solid #e6d28a;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-favorite:hover {
+  background: #fff8e1;
+}
+
+/* Espace entre la grille et la section « Mes favoris » */
+.favorites-section {
+  margin-top: 1.5rem;
+}
+
+/* Boîte de la pochette dans « Mes favoris » (même taille que dans « Mes pistes ») */
+.favorite-cover-box {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: #123d32;
+}
+
+/* Un titre trop long est coupé avec « … » au lieu de déborder */
+.favorites-section .track-details {
+  min-width: 0;
+}
+
+.favorites-section .track-details b,
+.favorites-section .track-details small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Les boutons gardent leur taille même si le titre est long */
+.favorites-section .track-actions {
+  flex-shrink: 0;
+}
+
 .empty-hint {
   padding: 1rem 0;
   color: #61756f;

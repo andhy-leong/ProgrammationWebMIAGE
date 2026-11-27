@@ -617,6 +617,53 @@ export function createApp() {
     }
   });
 
+  /** Retourne toutes les pistes favorites de l'utilisateur (sans pagination). */
+  app.get("/api/tracks/favorites", auth, async (req, res, next) => {
+    try {
+      const tracks = await Track.find({
+        ownerId: req.auth.sub,
+        isFavorite: true,
+      }).sort({ createdAt: -1 });
+
+      console.log(`[tracks] ${tracks.length} favori(s) envoyé(s) pour ${req.auth.sub}`);
+      res.json(tracks.map((track) => track.toPublic()));
+    } catch (error) {
+      console.error("[tracks] Erreur de lecture des favoris", error);
+      next(error);
+    }
+  });
+
+  /** Ajoute ou retire une piste des favoris. */
+  app.put("/api/tracks/:id/favorite", auth, async (req, res, next) => {
+    try {
+      const isFavorite = req.body?.isFavorite;
+
+      if (typeof isFavorite !== "boolean") {
+        console.warn(`[tracks] Favori refusé (isFavorite invalide) : ${req.params.id}`);
+        return res.status(400).json({ message: "isFavorite doit valoir true ou false" });
+      }
+
+      const track = await Track.findOne({
+        _id: req.params.id,
+        ownerId: req.auth.sub,
+      });
+
+      if (!track) {
+        console.warn(`[tracks] Favori impossible, piste inconnue : ${req.params.id}`);
+        return res.status(404).json({ message: "Piste inconnue" });
+      }
+
+      track.isFavorite = isFavorite;
+      await track.save();
+
+      console.log(`[tracks] Piste ${track.id} favori=${isFavorite}`);
+      res.json(track.toPublic());
+    } catch (error) {
+      console.error("[tracks] Erreur de mise à jour du favori", error);
+      next(error);
+    }
+  });
+
   /** Renomme une piste : change uniquement son titre. */
   app.put("/api/tracks/:id", auth, async (req, res, next) => {
     try {

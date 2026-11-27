@@ -133,6 +133,15 @@
             </div>
           </div>
           <div class="track-actions">
+            <!-- Étoile pleine ★ si la piste est en favoris, vide ☆ sinon -->
+            <button
+              type="button"
+              class="btn-favorite"
+              (click)="toggleFavorite(track)"
+              [attr.aria-label]="track.isFavorite ? 'Retirer ' + track.title + ' des favoris' : 'Ajouter ' + track.title + ' aux favoris'"
+              [title]="track.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'">
+              {{ track.isFavorite ? '★' : '☆' }}
+            </button>
             <button
               type="button"
               class="btn-cover-action"
@@ -241,5 +250,40 @@
       }
     </article>
   </div>
+
+  <!-- Section « Mes favoris » : toutes les pistes mises en favoris -->
+  <article class="card favorites-section">
+    <h2>★ Mes favoris</h2>
+
+    @for (track of favorites(); track track.id) {
+      <div class="track">
+        <div class="track-main">
+          <!-- Petite boîte de 48x48 px qui contient la pochette -->
+          <div class="favorite-cover-box">
+            <img [src]="getTrackCoverUrl(track)" [alt]="'Pochette de ' + track.title" class="track-cover" loading="lazy" />
+          </div>
+          <div class="track-details">
+            <b>{{ track.title }}</b>
+            <small>{{ track.originalName }} · {{ track.size | fileSize }}</small>
+          </div>
+        </div>
+        <div class="track-actions">
+          <button
+            type="button"
+            class="btn-favorite"
+            (click)="toggleFavorite(track)"
+            [attr.aria-label]="'Retirer ' + track.title + ' des favoris'"
+            title="Retirer des favoris">
+            ★
+          </button>
+          <button type="button" class="btn-play" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">
+            ▶
+          </button>
+        </div>
+      </div>
+    } @empty {
+      <p class="empty-hint">Aucun favori pour l'instant. Clique sur ☆ à côté d'une piste pour l'ajouter.</p>
+    }
+  </article>
 </section>
 
