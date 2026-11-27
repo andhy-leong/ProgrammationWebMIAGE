@@ -49,7 +49,16 @@
     <article class="card">
       <div class="row">
         <h2>Mes pistes</h2>
-        <button type="button" (click)="load()" [disabled]="loading()">Actualiser</button>
+        <div class="list-buttons">
+          <!-- Le bouton est « actif » (couleur différente) quand l'aléatoire est activé -->
+          <button type="button" class="btn-shuffle" [class.active]="shuffle()" (click)="toggleShuffle()" title="Lecture aléatoire">
+            🔀 Aléatoire
+          </button>
+          <button type="button" (click)="playAll(filteredTracks())" [disabled]="filteredTracks().length === 0">
+            ▶ Tout lire
+          </button>
+          <button type="button" (click)="load()" [disabled]="loading()">Actualiser</button>
+        </div>
       </div>
       @if (loading()) {
         <p class="loading-state">Chargement des pistes en cours…</p>
@@ -173,7 +182,7 @@
             <button
               type="button"
               class="btn-play"
-              (click)="play(track)"
+              (click)="playOne(track, filteredTracks())"
               [disabled]="deletingTrackId() === track.id"
               [attr.aria-label]="'Lire ' + track.title">
               ▶
@@ -253,7 +262,17 @@
 
   <!-- Section « Mes favoris » : toutes les pistes mises en favoris -->
   <article class="card favorites-section">
-    <h2>★ Mes favoris</h2>
+    <div class="row">
+      <h2>★ Mes favoris</h2>
+      <div class="list-buttons">
+        <button type="button" class="btn-shuffle" [class.active]="shuffle()" (click)="toggleShuffle()" title="Lecture aléatoire">
+          🔀 Aléatoire
+        </button>
+        <button type="button" (click)="playAll(favorites())" [disabled]="favorites().length === 0">
+          ▶ Tout lire
+        </button>
+      </div>
+    </div>
 
     @for (track of favorites(); track track.id) {
       <div class="track">
@@ -276,7 +295,7 @@
             title="Retirer des favoris">
             ★
           </button>
-          <button type="button" class="btn-play" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">
+          <button type="button" class="btn-play" (click)="playOne(track, favorites())" [attr.aria-label]="'Lire ' + track.title">
             ▶
           </button>
         </div>

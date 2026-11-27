@@ -335,6 +335,26 @@
   color: #17312a;
 }
 
+/* Groupe de boutons à droite du titre d'une liste */
+.list-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Bouton « Aléatoire » : blanc quand il est désactivé... */
+.btn-shuffle {
+  background: white;
+  color: #1d755e;
+  border: 1px solid #1d755e;
+}
+
+/* ... et vert quand il est activé */
+.btn-shuffle.active {
+  background: #1d755e;
+  color: white;
+}
+
 /* Bouton étoile pour les favoris */
 .btn-favorite {
   padding: 0.35rem 0.6rem;

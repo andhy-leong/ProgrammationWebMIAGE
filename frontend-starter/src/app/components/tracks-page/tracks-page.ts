@@ -49,6 +49,16 @@ export class TracksPageComponent implements OnDestroy {
   // 'none' = pas de répétition, 'one' = répéter la musique, 'all' = répéter la playlist
   readonly repeatMode = signal('none');
 
+  // Liste de lecture
+  // originalList : les pistes dans l'ordre normal
+  // playlist : les pistes dans l'ordre où elles seront jouées (mélangées si « Aléatoire » est activé)
+  readonly originalList = signal<Track[]>([]);
+  readonly playlist = signal<Track[]>([]);
+  // true quand on a cliqué sur « Tout lire » : les pistes s'enchaînent jusqu'à la fin
+  readonly playingAll = signal(false);
+  // true quand la lecture aléatoire est activée
+  readonly shuffle = signal(false);
+
   readonly title = new FormControl('', { nonNullable: true });
 
   coverFile?: File;
@@ -406,28 +416,103 @@ export class TracksPageComponent implements OnDestroy {
     this.repeatMode.set(select.value);
   }
 
+  // Bouton « Tout lire » : lit toute la liste à la suite
+  playAll(list: Track[]): void {
+    if (list.length === 0) {
+      return;
+    }
+    this.playingAll.set(true);
+    this.originalList.set(list);
+    this.buildPlaylist(null);
+    this.play(this.playlist()[0]);
+  }
+
+  // Bouton ▶ d'une piste : lit cette piste.
+  // On garde quand même la liste, pour le mode « Répéter la playlist ».
+  playOne(track: Track, list: Track[]): void {
+    this.playingAll.set(false);
+    this.originalList.set(list);
+    this.buildPlaylist(track);
+    this.play(track);
+  }
+
+  // Bouton « Aléatoire » : active ou désactive la lecture aléatoire
+  toggleShuffle(): void {
+    this.shuffle.set(!this.shuffle());
+    // On refait l'ordre de lecture, en gardant la piste en cours comme point de départ
+    this.buildPlaylist(this.currentTrack());
+  }
+
+  // Prépare l'ordre de lecture à partir de originalList.
+  // firstTrack : la piste qui doit être jouée en premier en mode aléatoire (ou null)
+  private buildPlaylist(firstTrack: Track | null): void {
+    const list = this.originalList();
+
+    // Lecture normale : on garde l'ordre de la liste
+    if (!this.shuffle() || list.length === 0) {
+      this.playlist.set([...list]);
+      return;
+    }
+
+    // Lecture aléatoire : on mélange la liste
+    const mixed = this.shuffleList(list);
+
+    // On met firstTrack au début de la liste mélangée
+    if (firstTrack) {
+      const index = mixed.findIndex((t) => t.id === firstTrack.id);
+      if (index !== -1) {
+        mixed.splice(index, 1); // on l'enlève de sa place
+        mixed.unshift(firstTrack); // on la remet au début
+      }
+    }
+
+    this.playlist.set(mixed);
+  }
+
+  // Renvoie une copie mélangée de la liste (méthode de « Fisher-Yates »)
+  private shuffleList(list: Track[]): Track[] {
+    const copy = [...list];
+    // On part de la fin, et on échange chaque piste avec une piste prise au hasard avant elle
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1)); // nombre au hasard entre 0 et i
+      const temp = copy[i];
+      copy[i] = copy[j];
+      copy[j] = temp;
+    }
+    return copy;
+  }
+
   // Appelée quand une musique est terminée
   // (en mode 'one', elle n'est jamais appelée car le navigateur relance la musique tout seul)
   onTrackEnded(): void {
-    if (this.repeatMode() !== 'all') {
-      return; // pas de répétition de playlist : on s'arrête là
+    // Ni « Tout lire », ni « Répéter la playlist » : on s'arrête après cette piste
+    if (!this.playingAll() && this.repeatMode() !== 'all') {
+      return;
     }
 
-    const playlist = this.filteredTracks();
-    if (playlist.length === 0) {
+    if (this.playlist().length === 0) {
       return;
     }
 
     // On cherche la position de la musique qui vient de se terminer
-    const currentIndex = playlist.findIndex((t) => t.id === this.currentTrack()?.id);
-
-    // On passe à la suivante. Si c'était la dernière, on revient à la première (index 0)
+    const currentIndex = this.playlist().findIndex((t) => t.id === this.currentTrack()?.id);
     let nextIndex = currentIndex + 1;
-    if (nextIndex >= playlist.length) {
+
+    // C'était la dernière piste de la liste
+    if (nextIndex >= this.playlist().length) {
+      if (this.repeatMode() !== 'all') {
+        this.playingAll.set(false); // fin de la lecture
+        return;
+      }
+      // « Répéter la playlist » : on recommence au début
       nextIndex = 0;
+      // En aléatoire, on mélange à nouveau pour que le nouveau tour soit différent
+      if (this.shuffle()) {
+        this.buildPlaylist(null);
+      }
     }
 
-    this.play(playlist[nextIndex]);
+    this.play(this.playlist()[nextIndex]);
   }
 
   // Appelée quand l'utilisateur clique sur « Renommer »
@@ -510,6 +595,10 @@ export class TracksPageComponent implements OnDestroy {
         }
         this.load();
         this.loadFavorites(); // la piste supprimée disparaît aussi de « Mes favoris »
+
+        // On retire aussi la piste de la liste de lecture
+        this.originalList.update((list) => list.filter((t) => t.id !== track.id));
+        this.playlist.update((list) => list.filter((t) => t.id !== track.id));
       },
       error: (error: HttpErrorResponse) => {
         console.error('[TracksPage] Suppression impossible', error);
