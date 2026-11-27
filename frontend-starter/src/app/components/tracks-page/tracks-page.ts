@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -13,6 +13,10 @@ import { TrackService } from '../../shared/services/track.service';
   imports: [ReactiveFormsModule, MatPaginatorModule, MatSnackBarModule, DatePipe, FileSizePipe],
   templateUrl: './tracks-page.html',
   styleUrl: './tracks-page.css',
+  // Écoute la touche Espace sur toute la page et appelle onSpaceKey()
+  host: {
+    '(document:keydown.space)': 'onSpaceKey($event)',
+  },
 })
 export class TracksPageComponent implements OnDestroy {
   private readonly service = inject(TrackService);
@@ -58,6 +62,11 @@ export class TracksPageComponent implements OnDestroy {
   readonly playingAll = signal(false);
   // true quand la lecture aléatoire est activée
   readonly shuffle = signal(false);
+  // true quand la lecture automatique est activée : à la fin d'une piste, la suivante démarre
+  readonly autoNext = signal(true);
+
+  // Accès à la balise <audio #player> du HTML (pour la touche Espace)
+  readonly player = viewChild<ElementRef<HTMLAudioElement>>('player');
 
   readonly title = new FormControl('', { nonNullable: true });
 
@@ -482,6 +491,37 @@ export class TracksPageComponent implements OnDestroy {
     return copy;
   }
 
+  // Case à cocher « Lecture automatique »
+  changeAutoNext(event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    this.autoNext.set(checkbox.checked);
+  }
+
+  // Touche Espace : met en pause ou relance la musique
+  onSpaceKey(event: Event): void {
+    const target = event.target as HTMLElement;
+
+    // Si on écrit dans un champ (ex : la recherche), Espace doit écrire un espace normalement.
+    // Si la barre audio a le focus, le navigateur gère déjà Espace tout seul.
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'AUDIO') {
+      return;
+    }
+
+    const audio = this.player()?.nativeElement;
+    if (!audio) {
+      return; // aucune musique lancée
+    }
+
+    // Empêche le défilement de la page et le « clic » sur le dernier bouton cliqué
+    event.preventDefault();
+
+    if (audio.paused) {
+      audio.play();
+    } else {
+      audio.pause();
+    }
+  }
+
   // Bouton ⏹ : arrête complètement la lecture et ferme le lecteur
   stopAll(): void {
     // On libère le fichier audio gardé en mémoire par le navigateur
@@ -537,8 +577,9 @@ export class TracksPageComponent implements OnDestroy {
   // Appelée quand une musique est terminée
   // (en mode 'one', elle n'est jamais appelée car le navigateur relance la musique tout seul)
   onTrackEnded(): void {
-    // Ni « Tout lire », ni « Répéter la playlist » : on s'arrête après cette piste
-    if (!this.playingAll() && this.repeatMode() !== 'all') {
+    // Ni « Tout lire », ni « Répéter la playlist », ni « Lecture automatique » :
+    // on s'arrête après cette piste
+    if (!this.playingAll() && this.repeatMode() !== 'all' && !this.autoNext()) {
       return;
     }
 

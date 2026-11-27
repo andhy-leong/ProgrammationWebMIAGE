@@ -248,6 +248,14 @@
               </button>
             </div>
 
+            <!-- Case à cocher : enchaîner automatiquement sur la piste suivante -->
+            <label class="inline-select">
+              <input type="checkbox" [checked]="autoNext()" (change)="changeAutoNext($event)" />
+              <span>Lecture automatique de la piste suivante</span>
+            </label>
+
+            <small class="shortcut-hint">Astuce : appuie sur <kbd>Espace</kbd> pour mettre en pause ou relancer.</small>
+
             <!-- Choix du mode de répétition -->
             <label class="inline-select">
               <span>Répétition</span>
