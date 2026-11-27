@@ -235,6 +235,19 @@
               (ended)="onTrackEnded()">
             </audio>
 
+            <!-- Boutons piste précédente / suivante (désactivés s'il n'y a qu'une seule piste) -->
+            <div class="player-buttons">
+              <button type="button" class="btn-skip" (click)="previousTrack()" [disabled]="playlist().length <= 1" title="Piste précédente">
+                ⏮ Précédente
+              </button>
+              <button type="button" class="btn-skip btn-stop" (click)="stopAll()" title="Tout arrêter">
+                ⏹ Stop
+              </button>
+              <button type="button" class="btn-skip" (click)="nextTrack()" [disabled]="playlist().length <= 1" title="Piste suivante">
+                Suivante ⏭
+              </button>
+            </div>
+
             <!-- Choix du mode de répétition -->
             <label class="inline-select">
               <span>Répétition</span>

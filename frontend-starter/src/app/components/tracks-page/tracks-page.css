@@ -335,6 +335,26 @@
   color: #17312a;
 }
 
+/* Boutons précédente / suivante du lecteur */
+.player-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-skip {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* Bouton Stop en rouge pour bien le distinguer */
+.btn-stop {
+  background: #c5221f;
+}
+
+.btn-stop:hover {
+  background: #a31b18;
+}
+
 /* Groupe de boutons à droite du titre d'une liste */
 .list-buttons {
   display: flex;

@@ -482,6 +482,58 @@ export class TracksPageComponent implements OnDestroy {
     return copy;
   }
 
+  // Bouton ⏹ : arrête complètement la lecture et ferme le lecteur
+  stopAll(): void {
+    // On libère le fichier audio gardé en mémoire par le navigateur
+    const url = this.audioUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+
+    // Quand audioUrl est vide, le lecteur disparaît de la page, donc le son s'arrête
+    this.audioUrl.set('');
+    this.currentTrack.set(null);
+
+    // On arrête aussi l'enchaînement « Tout lire »
+    this.playingAll.set(false);
+  }
+
+  // Bouton ⏭ : passe à la piste suivante de la liste de lecture
+  nextTrack(): void {
+    const list = this.playlist();
+    if (list.length === 0) {
+      return;
+    }
+
+    const currentIndex = list.findIndex((t) => t.id === this.currentTrack()?.id);
+    let nextIndex = currentIndex + 1;
+
+    // Après la dernière piste, on revient à la première
+    if (nextIndex >= list.length) {
+      nextIndex = 0;
+    }
+
+    this.play(list[nextIndex]);
+  }
+
+  // Bouton ⏮ : revient à la piste précédente de la liste de lecture
+  previousTrack(): void {
+    const list = this.playlist();
+    if (list.length === 0) {
+      return;
+    }
+
+    const currentIndex = list.findIndex((t) => t.id === this.currentTrack()?.id);
+    let previousIndex = currentIndex - 1;
+
+    // Avant la première piste, on va à la dernière
+    if (previousIndex < 0) {
+      previousIndex = list.length - 1;
+    }
+
+    this.play(list[previousIndex]);
+  }
+
   // Appelée quand une musique est terminée
   // (en mode 'one', elle n'est jamais appelée car le navigateur relance la musique tout seul)
   onTrackEnded(): void {
