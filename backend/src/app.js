@@ -617,6 +617,39 @@ export function createApp() {
     }
   });
 
+  /** Renomme une piste : change uniquement son titre. */
+  app.put("/api/tracks/:id", auth, async (req, res, next) => {
+    try {
+      // On enlève les espaces au début et à la fin du titre reçu
+      const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+
+      if (!title) {
+        console.warn(`[tracks] Renommage refusé (titre vide) : ${req.params.id}`);
+        return res.status(400).json({ message: "Le titre est obligatoire" });
+      }
+
+      // On cherche la piste seulement parmi celles de l'utilisateur connecté
+      const track = await Track.findOne({
+        _id: req.params.id,
+        ownerId: req.auth.sub,
+      });
+
+      if (!track) {
+        console.warn(`[tracks] Renommage impossible, piste inconnue : ${req.params.id}`);
+        return res.status(404).json({ message: "Piste inconnue" });
+      }
+
+      track.title = title;
+      await track.save();
+
+      console.log(`[tracks] Piste renommée : ${track.id} -> "${title}"`);
+      res.json(track.toPublic());
+    } catch (error) {
+      console.error("[tracks] Erreur de renommage", error);
+      next(error);
+    }
+  });
+
   /** Supprime la métadonnée et les fichiers physiques correspondants (audio et couverture). */
   app.delete("/api/tracks/:id", auth, async (req, res, next) => {
     try {

@@ -154,6 +154,15 @@
             }
             <button
               type="button"
+              class="btn-cover-action"
+              (click)="renameTrack(track)"
+              [disabled]="renamingTrackId() === track.id || deletingTrackId() === track.id"
+              [attr.aria-label]="'Renommer ' + track.title"
+              title="Renommer le titre">
+              {{ renamingTrackId() === track.id ? '⏳' : '✏️ Renommer' }}
+            </button>
+            <button
+              type="button"
               class="btn-play"
               (click)="play(track)"
               [disabled]="deletingTrackId() === track.id"

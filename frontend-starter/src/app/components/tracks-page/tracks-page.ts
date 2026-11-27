@@ -32,6 +32,8 @@ export class TracksPageComponent implements OnDestroy {
   readonly uploadSuccess = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
   readonly deletingTrackId = signal<string | null>(null);
+  // Identifiant de la piste en cours de renommage (pour afficher ⏳ sur son bouton)
+  readonly renamingTrackId = signal<string | null>(null);
   readonly currentTrack = signal<Track | null>(null);
   readonly audioUrl = signal('');
 
@@ -390,6 +392,55 @@ export class TracksPageComponent implements OnDestroy {
     }
 
     this.play(playlist[nextIndex]);
+  }
+
+  // Appelée quand l'utilisateur clique sur « Renommer »
+  renameTrack(track: Track): void {
+    // On ouvre une petite fenêtre qui propose l'ancien titre
+    const newTitle = window.prompt('Nouveau titre :', track.title);
+
+    // L'utilisateur a cliqué sur « Annuler »
+    if (newTitle === null) {
+      return;
+    }
+
+    // On enlève les espaces au début et à la fin
+    const title = newTitle.trim();
+
+    if (title === '') {
+      this.snackBar.open('Le titre ne peut pas être vide.', 'Fermer', { duration: 3500 });
+      return;
+    }
+
+    // Rien n'a changé : inutile d'appeler le serveur
+    if (title === track.title) {
+      return;
+    }
+
+    this.renamingTrackId.set(track.id);
+
+    this.service.rename(track.id, title).subscribe({
+      next: () => {
+        // On met à jour le titre dans la liste affichée
+        this.tracks.update((list) =>
+          list.map((t) => (t.id === track.id ? { ...t, title: title } : t))
+        );
+
+        // Si cette piste est en cours de lecture, on met aussi à jour le lecteur
+        if (this.currentTrack()?.id === track.id) {
+          this.currentTrack.update((current) => (current ? { ...current, title: title } : null));
+        }
+
+        this.renamingTrackId.set(null);
+        this.snackBar.open(`Piste renommée en « ${title} ».`, 'Fermer', { duration: 3500 });
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error('[TracksPage] Renommage impossible', error);
+        this.renamingTrackId.set(null);
+        const message = error.error?.message ?? 'Impossible de renommer la piste.';
+        this.snackBar.open(message, 'Fermer', { duration: 4000 });
+      },
+    });
   }
 
   deleteTrack(track: Track): void {

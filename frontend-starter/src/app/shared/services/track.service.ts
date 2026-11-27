@@ -54,6 +54,11 @@ export class TrackService {
     return this.http.delete<Track>(`/api/tracks/${id}/cover`);
   }
 
+  /** Renomme une piste (change son titre). */
+  rename(id: string, title: string): Observable<Track> {
+    return this.http.put<Track>(`/api/tracks/${id}`, { title });
+  }
+
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`/api/tracks/${id}`);
   }
